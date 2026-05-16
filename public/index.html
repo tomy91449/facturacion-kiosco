@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kiosco Domingo — POS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #f7f5f0;
+      --surface:  #ffffff;
+      --border:   #e8e4dc;
+      --text:     #1a1a18;
+      --muted:    #8a8780;
+      --accent:   #2d6a4f;
+      --accent2:  #e9c46a;
+      --danger:   #c0392b;
+      --radius:   10px;
+      --shadow:   0 1px 3px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 38px;
+      height: 38px;
+      background: var(--accent);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-icon svg { width: 22px; height: 22px; }
+
+    .logo-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.1;
+    }
+
+    .logo-name {
+      font-family: 'DM Serif Display', serif;
+      font-size: 18px;
+      color: var(--text);
+      letter-spacing: -0.3px;
+    }
+
+    .logo-sub {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 300;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .clock {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 300;
+    }
+
+    /* ── NAV TABS ── */
+    nav {
+      display: flex;
+      gap: 4px;
+    }
+
+    .tab {
+      padding: 6px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      transition: all 0.15s;
+    }
+
+    .tab:hover { background: var(--bg); color: var(--text); }
+    .tab.active { background: var(--accent); color: #fff; }
+
+    /* ── MAIN LAYOUT ── */
+    main {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 0;
+      height: calc(100vh - 64px);
+      overflow: hidden;
+    }
+
+    /* ── PANEL IZQUIERDO ── */
+    .left-panel {
+      padding: 1.5rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    /* ── SEARCH BAR ── */
+    .search-bar {
+      display: flex;
+      gap: 8px;
+    }
+
+    .search-input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      background: var(--surface);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .search-input:focus { border-color: var(--accent); }
+
+    .btn {
+      padding: 10px 18px;
+      border-radius: var(--radius);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s;
+    }
+
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #235c42; }
+    .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: var(--bg); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-danger:hover { background: #a93226; }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+    /* ── SECCIONES ── */
+    .section { display: none; flex-direction: column; gap: 1rem; }
+    .section.active { display: flex; }
+
+    /* ── PRODUCTO ENCONTRADO ── */
+    .product-found {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: var(--shadow);
+      animation: slideIn 0.2s ease;
+    }
+
+    .product-found.show { display: flex; }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .product-info h3 { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+    .product-info p  { font-size: 13px; color: var(--muted); }
+
+    .product-price {
+      font-family: 'DM Serif Display', serif;
+      font-size: 22px;
+      color: var(--accent);
+      margin-right: 16px;
+    }
+
+    .qty-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 4px 8px;
+    }
+
+    .qty-btn {
+      width: 28px; height: 28px;
+      border-radius: 6px;
+      border: none;
+      background: var(--surface);
+      font-size: 16px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid var(--border);
+      transition: all 0.1s;
+    }
+
+    .qty-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .qty-num { font-size: 15px; font-weight: 500; min-width: 20px; text-align: center; }
+
+    /* ── TABLA DE PRODUCTOS ── */
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 11px 14px;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafaf8; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .badge-ok  { background: #d4edda; color: #155724; }
+    .badge-low { background: #fff3cd; color: #856404; }
+    .badge-out { background: #f8d7da; color: #721c24; }
+
+    /* ── FORM NUEVO PRODUCTO ── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group.full { grid-column: 1 / -1; }
+
+    label { font-size: 12px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; }
+
+    input[type="text"], input[type="number"] {
+      padding: 9px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      background: var(--surface);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input:focus { border-color: var(--accent); }
+
+    .form-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+
+    .form-card h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 18px;
+      margin-bottom: 1.25rem;
+    }
+
+    /* ── PANEL DERECHO (CARRITO) ── */
+    .right-panel {
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .cart-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .cart-header h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 18px;
+    }
+
+    .cart-count {
+      background: var(--accent);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+
+    .cart-items {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .cart-empty {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 13px;
+      gap: 8px;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    .cart-empty svg { opacity: 0.3; }
+
+    .cart-item {
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: slideIn 0.15s ease;
+    }
+
+    .cart-item-info { flex: 1; min-width: 0; }
+    .cart-item-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cart-item-detail { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .cart-item-subtotal { font-size: 14px; font-weight: 500; color: var(--accent); white-space: nowrap; }
+
+    .remove-btn {
+      width: 22px; height: 22px;
+      border-radius: 4px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.1s;
+      flex-shrink: 0;
+    }
+
+    .remove-btn:hover { background: #fde8e8; color: var(--danger); }
+
+    /* ── TOTALES ── */
+    .cart-footer {
+      border-top: 1px solid var(--border);
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .totals { display: flex; flex-direction: column; gap: 6px; }
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .total-row.grand {
+      font-size: 20px;
+      font-family: 'DM Serif Display', serif;
+      color: var(--text);
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+      margin-top: 4px;
+    }
+
+    .total-row.grand span:last-child { color: var(--accent); }
+
+    /* ── MÉTODO DE PAGO ── */
+    .payment-methods {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .pay-btn {
+      padding: 8px 4px;
+      border-radius: 8px;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+      color: var(--muted);
+    }
+
+    .pay-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .pay-btn.selected { border-color: var(--accent); background: #eaf4ee; color: var(--accent); }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--text);
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all 0.25s ease;
+      z-index: 100;
+      max-width: 280px;
+    }
+
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { background: var(--accent); }
+    .toast.error   { background: var(--danger); }
+
+    /* ── LOADING ── */
+    .loading { color: var(--muted); font-size: 13px; padding: 2rem; text-align: center; }
+
+    /* ── RESUMEN DIA ── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      box-shadow: var(--shadow);
+    }
+
+    .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 6px; }
+    .stat-value { font-family: 'DM Serif Display', serif; font-size: 26px; color: var(--accent); }
+    .stat-sub   { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+    </div>
+    <div class="logo-text">
+      <span class="logo-name">Kiosco Domingo</span>
+      <span class="logo-sub">Sistema de punto de venta</span>
+    </div>
+  </div>
+
+  <nav>
+    <button class="tab active" onclick="showTab('venta')">Venta</button>
+    <button class="tab" onclick="showTab('productos')">Productos</button>
+    <button class="tab" onclick="showTab('nuevo')">+ Nuevo</button>
+    <button class="tab" onclick="showTab('resumen')">Cierre de caja</button>
+  </nav>
+
+  <div class="header-right">
+    <span class="clock" id="clock"></span>
+  </div>
+</header>
+
+<main>
+  <!-- PANEL IZQUIERDO -->
+  <div class="left-panel">
+
+    <!-- SECCIÓN: VENTA -->
+    <div class="section active" id="sec-venta">
+      <div class="search-bar">
+        <input class="search-input" id="barcode-input" type="text"
+          placeholder="Escanear código de barras o escribir..."
+          autofocus autocomplete="off"
+          onkeydown="if(event.key==='Enter') buscarProducto()" />
+        <button class="btn btn-primary" onclick="buscarProducto()">Buscar</button>
+      </div>
+
+      <div class="product-found" id="product-found">
+        <div class="product-info">
+          <h3 id="pf-nombre"></h3>
+          <p id="pf-stock"></p>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span class="product-price" id="pf-precio"></span>
+          <div class="qty-control">
+            <button class="qty-btn" onclick="cambiarQty(-1)">−</button>
+            <span class="qty-num" id="pf-qty">1</span>
+            <button class="qty-btn" onclick="cambiarQty(1)">+</button>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="agregarAlCarrito()">Agregar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN: PRODUCTOS -->
+    <div class="section" id="sec-productos">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Descripción</th>
+              <th>Código</th>
+              <th>Precio</th>
+              <th>Stock</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="productos-tbody">
+            <tr><td colspan="5" class="loading">Cargando productos...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SECCIÓN: NUEVO PRODUCTO -->
+    <div class="section" id="sec-nuevo">
+      <div class="form-card">
+        <h2>Nuevo producto</h2>
+        <div class="form-grid">
+          <div class="form-group full">
+            <label>Descripción</label>
+            <input type="text" id="np-desc" placeholder="Coca Cola 500ml" />
+          </div>
+          <div class="form-group">
+            <label>Código de barras</label>
+            <input type="text" id="np-barcode" placeholder="7790895000109" />
+          </div>
+          <div class="form-group">
+            <label>Stock inicial</label>
+            <input type="number" id="np-stock" placeholder="0" value="0" min="0" />
+          </div>
+          <div class="form-group">
+            <label>Precio de venta ($)</label>
+            <input type="number" id="np-price" placeholder="500" min="0" step="0.01" />
+          </div>
+          <div class="form-group">
+            <label>Precio de costo ($)</label>
+            <input type="number" id="np-cost" placeholder="300" min="0" step="0.01" />
+          </div>
+        </div>
+        <div style="margin-top:1.25rem;display:flex;gap:8px">
+          <button class="btn btn-primary" onclick="crearProducto()">Guardar producto</button>
+          <button class="btn btn-secondary" onclick="limpiarForm()">Limpiar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN: RESUMEN -->
+    <div class="section" id="sec-resumen">
+      <div class="summary-grid" id="summary-grid">
+        <div class="loading" style="grid-column:1/-1">Cargando resumen...</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- PANEL DERECHO: CARRITO -->
+  <div class="right-panel">
+    <div class="cart-header">
+      <h2>Ticket</h2>
+      <span class="cart-count" id="cart-count">0 items</span>
+    </div>
+
+    <div class="cart-items" id="cart-items">
+      <div class="cart-empty">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+        </svg>
+        <p>El ticket está vacío.<br>Buscá un producto para comenzar.</p>
+      </div>
+    </div>
+
+    <div class="cart-footer">
+      <div class="totals">
+        <div class="total-row"><span>Subtotal</span><span id="subtotal">$0,00</span></div>
+        <div class="total-row grand"><span>Total</span><span id="grand-total">$0,00</span></div>
+      </div>
+
+      <div class="payment-methods">
+        <button class="pay-btn selected" data-method="CASH" onclick="selectPay(this)">Efectivo</button>
+        <button class="pay-btn" data-method="CARD" onclick="selectPay(this)">Tarjeta</button>
+        <button class="pay-btn" data-method="TRANSFER" onclick="selectPay(this)">Transferencia</button>
+        <button class="pay-btn" data-method="QR" onclick="selectPay(this)">QR</button>
+        <button class="pay-btn" data-method="MIXED" onclick="selectPay(this)">Mixto</button>
+      </div>
+
+      <button class="btn btn-primary" style="width:100%;padding:13px" onclick="cobrar()">
+        Cobrar
+      </button>
+      <button class="btn btn-secondary btn-sm" style="width:100%" onclick="vaciarCarrito()">
+        Vaciar ticket
+      </button>
+    </div>
+  </div>
+</main>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+  const API = 'http://localhost:4000';
+
+  // ── Estado ──────────────────────────────────
+  let carrito = [];
+  let productoActual = null;
+  let qtyActual = 1;
+  let metodoPago = 'CASH';
+
+  // ── Reloj ───────────────────────────────────
+  function actualizarReloj() {
+    const now = new Date();
+    document.getElementById('clock').textContent =
+      now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) + ' · ' +
+      now.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' });
+  }
+  actualizarReloj();
+  setInterval(actualizarReloj, 1000);
+
+  // ── Tabs ────────────────────────────────────
+  function showTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('sec-' + tab).classList.add('active');
+    if (tab === 'productos') cargarProductos();
+    if (tab === 'resumen')   cargarResumen();
+    if (tab === 'venta') document.getElementById('barcode-input').focus();
+  }
+
+  // ── Toast ───────────────────────────────────
+  function toast(msg, tipo = 'success') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'toast show ' + tipo;
+    clearTimeout(window._toastTimer);
+    window._toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+  }
+
+  // ── Formato moneda ───────────────────────────
+  function fmt(n) {
+    return '$' + Number(n).toLocaleString('es-AR', { minimumFractionDigits: 2 });
+  }
+
+  // ── BUSCAR PRODUCTO ──────────────────────────
+  async function buscarProducto() {
+    const code = document.getElementById('barcode-input').value.trim();
+    if (!code) return;
+    try {
+      const r = await fetch(`${API}/products/barcode/${encodeURIComponent(code)}`);
+      const data = await r.json();
+      if (!data.success) { toast('Producto no encontrado', 'error'); return; }
+      const p = data.data;
+      productoActual = p;
+      qtyActual = 1;
+      document.getElementById('pf-nombre').textContent = p.description;
+      document.getElementById('pf-stock').textContent  = `Stock: ${p.stock} unidades · Cód: ${p.barcode}`;
+      document.getElementById('pf-precio').textContent = fmt(p.price);
+      document.getElementById('pf-qty').textContent    = 1;
+      document.getElementById('product-found').classList.add('show');
+    } catch(e) { toast('Error de conexión con el servidor', 'error'); }
+  }
+
+  function cambiarQty(d) {
+    qtyActual = Math.max(1, qtyActual + d);
+    document.getElementById('pf-qty').textContent = qtyActual;
+  }
+
+  // ── CARRITO ──────────────────────────────────
+  function agregarAlCarrito() {
+    if (!productoActual) return;
+    const existente = carrito.find(i => i.productId === productoActual.id);
+    if (existente) {
+      existente.quantity += qtyActual;
+      existente.subtotal  = existente.quantity * existente.unitPrice;
+    } else {
+      carrito.push({
+        productId: productoActual.id,
+        description: productoActual.description,
+        quantity: qtyActual,
+        unitPrice: productoActual.price,
+        subtotal: qtyActual * productoActual.price,
+      });
+    }
+    document.getElementById('barcode-input').value = '';
+    document.getElementById('product-found').classList.remove('show');
+    productoActual = null;
+    qtyActual = 1;
+    renderCarrito();
+    document.getElementById('barcode-input').focus();
+    toast('Producto agregado al ticket');
+  }
+
+  function renderCarrito() {
+    const container = document.getElementById('cart-items');
+    if (carrito.length === 0) {
+      container.innerHTML = `
+        <div class="cart-empty">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+          </svg>
+          <p>El ticket está vacío.<br>Buscá un producto para comenzar.</p>
+        </div>`;
+      document.getElementById('cart-count').textContent = '0 items';
+      document.getElementById('subtotal').textContent   = '$0,00';
+      document.getElementById('grand-total').textContent = '$0,00';
+      return;
+    }
+    const total = carrito.reduce((s, i) => s + i.subtotal, 0);
+    container.innerHTML = carrito.map((item, idx) => `
+      <div class="cart-item">
+        <div class="cart-item-info">
+          <div class="cart-item-name">${item.description}</div>
+          <div class="cart-item-detail">${item.quantity} x ${fmt(item.unitPrice)}</div>
+        </div>
+        <span class="cart-item-subtotal">${fmt(item.subtotal)}</span>
+        <button class="remove-btn" onclick="quitarItem(${idx})">×</button>
+      </div>`).join('');
+    const count = carrito.reduce((s, i) => s + i.quantity, 0);
+    document.getElementById('cart-count').textContent  = count + (count === 1 ? ' item' : ' items');
+    document.getElementById('subtotal').textContent    = fmt(total);
+    document.getElementById('grand-total').textContent = fmt(total);
+  }
+
+  function quitarItem(idx) {
+    carrito.splice(idx, 1);
+    renderCarrito();
+  }
+
+  function vaciarCarrito() {
+    carrito = [];
+    renderCarrito();
+  }
+
+  function selectPay(btn) {
+    document.querySelectorAll('.pay-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    metodoPago = btn.dataset.method;
+  }
+
+  // ── COBRAR ───────────────────────────────────
+  async function cobrar() {
+    if (carrito.length === 0) { toast('El ticket está vacío', 'error'); return; }
+    try {
+      const body = {
+        items: carrito.map(i => ({ productId: i.productId, quantity: i.quantity })),
+        paymentMethod: metodoPago,
+        printTicket: false,
+      };
+      const r    = await fetch(`${API}/sales`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const data = await r.json();
+      if (!data.success) { toast(data.error || 'Error al registrar la venta', 'error'); return; }
+      toast(`Venta #${data.saleId} registrada — ${fmt(data.grandTotal)}`);
+      vaciarCarrito();
+    } catch(e) { toast('Error de conexión con el servidor', 'error'); }
+  }
+
+  // ── CARGAR PRODUCTOS ─────────────────────────
+  async function cargarProductos() {
+    document.getElementById('productos-tbody').innerHTML =
+      '<tr><td colspan="5" class="loading">Cargando...</td></tr>';
+    try {
+      const r    = await fetch(`${API}/products`);
+      const data = await r.json();
+      if (!data.data.length) {
+        document.getElementById('productos-tbody').innerHTML =
+          '<tr><td colspan="5" class="loading">No hay productos cargados todavía.</td></tr>';
+        return;
+      }
+      document.getElementById('productos-tbody').innerHTML = data.data.map(p => {
+        const badge = p.stock <= 0
+          ? '<span class="badge badge-out">Sin stock</span>'
+          : p.stock <= p.minStock
+          ? '<span class="badge badge-low">Stock bajo</span>'
+          : '<span class="badge badge-ok">OK</span>';
+        return `<tr>
+          <td><strong>${p.description}</strong></td>
+          <td style="font-family:monospace;font-size:12px;color:var(--muted)">${p.barcode}</td>
+          <td>${fmt(p.price)}</td>
+          <td>${p.stock}</td>
+          <td>${badge}</td>
+        </tr>`;
+      }).join('');
+    } catch(e) {
+      document.getElementById('productos-tbody').innerHTML =
+        '<tr><td colspan="5" class="loading">Error al cargar productos.</td></tr>';
+    }
+  }
+
+  // ── CREAR PRODUCTO ───────────────────────────
+  async function crearProducto() {
+    const desc    = document.getElementById('np-desc').value.trim();
+    const barcode = document.getElementById('np-barcode').value.trim();
+    const price   = parseFloat(document.getElementById('np-price').value);
+    const cost    = parseFloat(document.getElementById('np-cost').value);
+    const stock   = parseInt(document.getElementById('np-stock').value) || 0;
+    if (!desc || !barcode || isNaN(price) || isNaN(cost)) {
+      toast('Completá todos los campos obligatorios', 'error'); return;
+    }
+    try {
+      const r    = await fetch(`${API}/products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ barcode, description: desc, price, cost, stock }),
+      });
+      const data = await r.json();
+      if (!data.success) { toast(data.error || 'Error al crear el producto', 'error'); return; }
+      toast(`"${desc}" creado correctamente`);
+      limpiarForm();
+    } catch(e) { toast('Error de conexión', 'error'); }
+  }
+
+  function limpiarForm() {
+    ['np-desc','np-barcode','np-price','np-cost','np-stock'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('np-stock').value = '0';
+  }
+
+  // ── RESUMEN DEL DÍA ──────────────────────────
+  async function cargarResumen() {
+    document.getElementById('summary-grid').innerHTML =
+      '<div class="loading" style="grid-column:1/-1">Cargando resumen...</div>';
+    try {
+      const r    = await fetch(`${API}/sales/daily-summary`);
+      const data = await r.json();
+      const s    = data.data;
+      document.getElementById('summary-grid').innerHTML = `
+        <div class="stat-card">
+          <div class="stat-label">Total del día</div>
+          <div class="stat-value">${fmt(s.grandTotal)}</div>
+          <div class="stat-sub">${s.totalTransactions} transacciones</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Efectivo</div>
+          <div class="stat-value">${fmt(s.byPaymentMethod.cash)}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Tarjeta</div>
+          <div class="stat-value">${fmt(s.byPaymentMethod.card)}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">QR / Transferencia</div>
+          <div class="stat-value">${fmt(s.byPaymentMethod.qr + s.byPaymentMethod.transfer)}</div>
+        </div>`;
+    } catch(e) {
+      document.getElementById('summary-grid').innerHTML =
+        '<div class="loading" style="grid-column:1/-1">Error al cargar el resumen.</div>';
+    }
+  }
+</script>
+</body>
+</html>
