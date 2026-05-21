@@ -1,6 +1,8 @@
 import { Router, Request, Response, NextFunction } from "express";
-import { PrismaClient } from "@prisma/client";
 import { ProductService, SaleService } from "../modules/sale/sale.service";
+
+// Forzamos a Node a requerir el archivo de manera exacta
+const { PrismaClient } = require("../generated/client");
 
 export const apiRouter = Router();
 const prisma = new PrismaClient();

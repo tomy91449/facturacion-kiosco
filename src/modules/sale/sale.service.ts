@@ -1,82 +1,177 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "../../generated/client";
+import { createPrinter } from "../print/printer.service";
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({ log: ["warn", "error"] });
 
-interface CreateSaleInput {
-  paymentMethod: string;
-  customerId?: number;
-  items: {
-    productId: number;
-    quantity: number;
-  }[];
+// ── Tipos ────────────────────────────────────
+export interface SaleItemInput {
+  productId: number;
+  quantity:  number;
 }
 
-export class SaleService {
-  static async createSale(data: CreateSaleInput) {
-    // Usamos $transaction para que si algo falla, se cancele todo y no rompa el stock
-    return await prisma.$transaction(async (tx) => {
-      let total = 0;
-      const saleItemsData = [];
+export interface CreateSaleInput {
+  items:         SaleItemInput[];
+  customerId?:   number;
+  paymentMethod: string;
+  discount?:     number;
+  taxRate?:      number;
+  notes?:        string;
+  printTicket?:  boolean;
+}
 
-      // 1. Validar productos, calcular precios y stock
-      for (const item of data.items) {
-        const product = await tx.product.findUnique({
-          where: { id: item.productId },
-        });
+export interface SaleResult {
+  success:     boolean;
+  saleId?:     number;
+  grandTotal?: number;
+  printed?:    boolean;
+  error?:      string;
+}
 
-        if (!product) {
-          throw new Error(`El producto con ID ${item.productId} no existe.`);
-        }
+// ── ProductService ───────────────────────────
+export const ProductService = {
 
-        if (!product.active) {
-          throw new Error(`El producto ${product.description} no está activo.`);
-        }
+  async findByBarcode(barcode: string) {
+    if (!barcode || barcode.trim().length === 0) {
+      throw new Error("El código de barras no puede estar vacío");
+    }
+    const normalizedBarcode = barcode.trim().toUpperCase();
+    const product = await prisma.product.findUnique({
+      where:   { barcode: normalizedBarcode },
+      include: { category: true },
+    });
+    if (!product) return null;
+    if (!product.active) throw new Error(`El producto "${product.description}" está inactivo`);
+    return product;
+  },
 
-        if (product.stock < item.quantity) {
-          throw new Error(`Stock insuficiente para ${product.description}. Stock actual: ${product.stock}`);
-        }
+  async getLowStockProducts() {
+    return prisma.product.findMany({
+      where:   { active: true, stock: { lte: 5 } },
+      orderBy: { stock: "asc" },
+    });
+  },
 
-        // Calcular subtotal de este ítem
-        const subtotal = product.price * item.quantity;
-        total += subtotal;
+  async updatePrice(productId: number, price: number, cost?: number) {
+    return prisma.product.update({
+      where: { id: productId },
+      data:  { price, ...(cost !== undefined && { cost }) },
+    });
+  },
+};
 
-        // Guardamos la info estructurada para el SaleItem
-        saleItemsData.push({
-          productId: product.id,
-          quantity: item.quantity,
-          unitPrice: product.price,
-          subtotal: subtotal,
-        });
+// ── SaleService ──────────────────────────────
+export const SaleService = {
 
-        // 2. Descontar el stock del producto
-        await tx.product.update({
-          where: { id: product.id },
-          data: {
-            stock: {
-              decrement: item.quantity,
-            },
-          },
-        });
-      }
+  async registerSale(input: CreateSaleInput): Promise<SaleResult> {
+    const { items, customerId, paymentMethod, discount = 0, taxRate = 0, notes, printTicket = false } = input;
 
-      // 3. Crear la venta con sus respectivos ítems
-      const newSale = await tx.sale.create({
-        data: {
-          paymentMethod: data.paymentMethod,
-          customerId: data.customerId || null,
-          total: total,
-          grandTotal: total, // Si después agregás descuentos/impuestos, los aplicás acá
-          status: 'COMPLETED',
-          items: {
-            create: saleItemsData,
-          },
-        },
-        include: {
-          items: true, // Para que nos devuelva la venta con los productos adentro
-        },
+    if (!items || items.length === 0) {
+      return { success: false, error: "La venta debe tener al menos un ítem" };
+    }
+
+    try {
+      const productIds = items.map((i) => i.productId);
+      const products   = await prisma.product.findMany({
+        where: { id: { in: productIds }, active: true },
       });
 
-      return newSale;
+      if (products.length !== productIds.length) {
+        return { success: false, error: "Algunos productos no fueron encontrados o están inactivos" };
+      }
+
+      const productMap = new Map(products.map((p) => [p.id, p]));
+
+      for (const item of items) {
+        const product = productMap.get(item.productId)!;
+        if (product.stock < item.quantity) {
+          return { success: false, error: `Stock insuficiente para "${product.description}". Disponible: ${product.stock}` };
+        }
+      }
+
+      let saleTotal = 0;
+      const lineItems: any[] = [];
+
+      for (const item of items) {
+        const product  = productMap.get(item.productId)!;
+        const subtotal = product.price * item.quantity;
+        saleTotal     += subtotal;
+        lineItems.push({ productId: item.productId, quantity: item.quantity, unitPrice: product.price, subtotal });
+      }
+
+      const taxAmount  = saleTotal * taxRate;
+      const grandTotal = saleTotal - discount + taxAmount;
+
+      const sale = await prisma.$transaction(async (tx) => {
+        const newSale = await tx.sale.create({
+          data: {
+            customerId,
+            paymentMethod,
+            total:      saleTotal,
+            discount,
+            tax:        taxAmount,
+            grandTotal,
+            notes,
+            items: { create: lineItems },
+          },
+          include: { items: { include: { product: true } }, customer: true },
+        });
+
+        await Promise.all(
+          items.map((item) =>
+            tx.product.update({
+              where: { id: item.productId },
+              data:  { stock: { decrement: item.quantity } },
+            })
+          )
+        );
+
+        return newSale;
+      });
+
+      return { success: true, saleId: sale.id, grandTotal: sale.grandTotal, printed: false };
+
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Error interno";
+      return { success: false, error: message };
+    }
+  },
+
+  async cancelSale(saleId: number) {
+    return prisma.$transaction(async (tx) => {
+      const sale = await tx.sale.findUnique({ where: { id: saleId }, include: { items: true } });
+      if (!sale) throw new Error(`Venta ${saleId} no encontrada`);
+      if (sale.status !== "COMPLETED") throw new Error(`La venta ya está en estado ${sale.status}`);
+
+      await Promise.all(
+        sale.items.map((item) =>
+          tx.product.update({ where: { id: item.productId }, data: { stock: { increment: item.quantity } } })
+        )
+      );
+
+      return tx.sale.update({ where: { id: saleId }, data: { status: "CANCELLED" } });
     });
-  }
-}
+  },
+
+  async getDailySummary(date: Date = new Date()) {
+    const start = new Date(date); start.setHours(0, 0, 0, 0);
+    const end   = new Date(date); end.setHours(23, 59, 59, 999);
+
+    const sales = await prisma.sale.findMany({
+      where: { date: { gte: start, lte: end }, status: "COMPLETED" },
+    });
+
+    const grandTotal = sales.reduce((acc, s) => acc + s.grandTotal, 0);
+
+    return {
+      date:               date.toISOString().split("T")[0],
+      totalTransactions:  sales.length,
+      grandTotal,
+      byPaymentMethod: {
+        cash:     sales.filter((s) => s.paymentMethod === "CASH").reduce((a, s) => a + s.grandTotal, 0),
+        card:     sales.filter((s) => s.paymentMethod === "CARD").reduce((a, s) => a + s.grandTotal, 0),
+        transfer: sales.filter((s) => s.paymentMethod === "TRANSFER").reduce((a, s) => a + s.grandTotal, 0),
+        qr:       sales.filter((s) => s.paymentMethod === "QR").reduce((a, s) => a + s.grandTotal, 0),
+      },
+    };
+  },
+};

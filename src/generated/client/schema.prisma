@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  description String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  products    Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  barcode     String   @unique
+  description String
+  price       Float
+  cost        Float
+  stock       Int      @default(0)
+  minStock    Int      @default(0) @map("min_stock")
+  categoryId  Int?     @map("category_id")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  category  Category?  @relation(fields: [categoryId], references: [id])
+  saleItems SaleItem[]
+
+  @@index([categoryId])
+  @@index([active, stock])
+  @@map("products")
+}
+
+model Customer {
+  id        Int      @id @default(autoincrement())
+  name      String
+  taxId     String?  @unique @map("tax_id")
+  email     String?
+  phone     String?
+  address   String?
+  createdAt DateTime @default(now()) @map("created_at")
+  sales     Sale[]
+
+  @@map("customers")
+}
+
+model Sale {
+  id            Int      @id @default(autoincrement())
+  date          DateTime @default(now())
+  customerId    Int?     @map("customer_id")
+  total         Float
+  discount      Float    @default(0)
+  tax           Float    @default(0)
+  grandTotal    Float    @map("grand_total")
+  paymentMethod String   @map("payment_method")
+  status        String   @default("COMPLETED")
+  notes         String?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  customer Customer?  @relation(fields: [customerId], references: [id])
+  items    SaleItem[]
+
+  @@index([date])
+  @@index([customerId])
+  @@map("sales")
+}
+
+model SaleItem {
+  id        Int   @id @default(autoincrement())
+  saleId    Int   @map("sale_id")
+  productId Int   @map("product_id")
+  quantity  Int
+  unitPrice Float @map("unit_price")
+  subtotal  Float
+
+  sale    Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([saleId])
+  @@map("sale_items")
+}

@@ -1,30 +1,58 @@
 {
-  "name": "pos-system",
+  "name": "kiosco-domingo",
   "version": "1.0.0",
-  "description": "Sistema POS minimalista con soporte ESC/POS para Datalogic",
-  "main": "dist/index.js",
+  "description": "Sistema POS Kiosco Domingo",
+  "main": "electron.js",
+  "author": "Kiosco Domingo",
   "scripts": {
-    "dev":        "tsx watch src/index.ts",
-    "build":      "tsc",
-    "start":      "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
     "db:migrate": "prisma migrate dev",
-    "db:studio":  "prisma studio",
-    "db:seed":    "tsx src/seed.ts"
+    "db:studio": "prisma studio",
+    "electron": "electron .",
+    "dist": "npm run build && electron-builder"
+  },
+  "build": {
+    "appId": "com.kioscoDomingo.app",
+    "productName": "Kiosco Domingo",
+    "icon": "public/icon.png",
+    "asar": true,
+    "asarUnpack": [
+      "src/generated/client/query_engine-windows.dll.node"
+    ],
+    "files": [
+      "dist/**/*",
+      "src/generated/client/**/*",
+      "electron.js",
+      "package.json",
+      "public/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "requestedExecutionLevel": "asInvoker",
+      "icon": "public/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   },
   "dependencies": {
-    "@prisma/client": "^5.14.0",
-    "express":        "^4.19.2",
-    "serialport":     "^12.0.0",
-    "jsonwebtoken":   "^9.0.2",
-    "dotenv":         "^16.4.5",
-    "zod":            "^3.23.8"
+    "@prisma/client": "^5.22.0",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.2",
+    "jsonwebtoken": "^9.0.2",
+    "serialport": "^12.0.0",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
-    "prisma":           "^5.14.0",
-    "@types/express":   "^4.17.21",
-    "@types/node":      "^20.14.0",
+    "@types/express": "^4.17.25",
     "@types/jsonwebtoken": "^9.0.6",
-    "typescript":       "^5.4.5",
-    "tsx":              "^4.15.6"
+    "@types/node": "^20.14.0",
+    "electron": "^42.2.0",
+    "electron-builder": "^26.8.1",
+    "prisma": "^5.14.0",
+    "tsx": "^4.15.6",
+    "typescript": "^5.4.5"
   }
 }
