@@ -6,7 +6,8 @@
   "author": "Kiosco Domingo",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "postinstall": "prisma generate",
+    "build": "tsc && node -e \"require('fs').cpSync('src/generated','dist/generated',{recursive:true})\"",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "electron": "electron .",

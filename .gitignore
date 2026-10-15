@@ -1,17 +1,28 @@
 # Dependencias
 node_modules/
 
+# Build y código generado (se regeneran con `npm run build` y `prisma generate`)
+dist/
+release/
+src/generated/
+
+# Base de datos local
+prisma/*.db
+prisma/*.db-journal
+
 # Variables de entorno y credenciales sensibles
 .env
-.env.local
-.env.development
-.env.production
+.env.*
+!.env.example
 
 # Archivos de autenticación o caché de sesiones locales
 .wwebjs_auth/
 .wwebjs_cache/
 
-# Archivos del sistema operativo
+# Archivos del sistema operativo / editor
 .DS_Store
 Thumbs.db
 *.log
+
+# Clon duplicado del proyecto
+facturacionKiosco/
