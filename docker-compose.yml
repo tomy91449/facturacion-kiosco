@@ -1,0 +1,19 @@
+services:
+  kiosco:
+    build: .
+    image: kiosco-domingo
+    container_name: kiosco-domingo
+    restart: unless-stopped
+    # JWT_SECRET, ADMIN_USERNAME, ADMIN_PASSWORD y datos del comercio
+    env_file: .env
+    environment:
+      HOST: 0.0.0.0
+      PORT: "4000"
+      DATABASE_URL: file:/app/data/pos.db
+    ports:
+      - "4000:4000"
+    volumes:
+      - kiosco-data:/app/data
+
+volumes:
+  kiosco-data:

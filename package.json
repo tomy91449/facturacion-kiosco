@@ -26,7 +26,9 @@
       "src/generated/client/**/*",
       "electron.js",
       "package.json",
-      "public/**/*"
+      "public/**/*",
+      "!node_modules/prisma/**",
+      "!node_modules/@prisma/engines/**"
     ],
     "win": {
       "target": "nsis",
@@ -43,6 +45,7 @@
     "dotenv": "^16.6.1",
     "express": "^4.22.2",
     "jsonwebtoken": "^9.0.2",
+    "prisma": "^5.22.0",
     "serialport": "^12.0.0",
     "zod": "^3.23.8"
   },
@@ -52,7 +55,6 @@
     "@types/node": "^20.14.0",
     "electron": "^42.2.0",
     "electron-builder": "^26.8.1",
-    "prisma": "^5.14.0",
     "tsx": "^4.15.6",
     "typescript": "^5.4.5"
   }
