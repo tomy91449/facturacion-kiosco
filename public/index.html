@@ -285,7 +285,7 @@
 
     label { font-size: 12px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; }
 
-    input[type="text"], input[type="number"] {
+    input[type="text"], input[type="number"], input[type="password"] {
       padding: 9px 12px;
       border: 1.5px solid var(--border);
       border-radius: 8px;
@@ -494,9 +494,67 @@
     .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 6px; }
     .stat-value { font-family: 'DM Serif Display', serif; font-size: 26px; color: var(--accent); }
     .stat-sub   { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* ── LOGIN ── */
+    .login-overlay {
+      position: fixed; inset: 0; z-index: 100;
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      padding: 1rem;
+    }
+    .login-overlay.hidden { display: none; }
+    .login-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 2rem;
+      width: 100%; max-width: 360px;
+      display: flex; flex-direction: column; gap: 1rem;
+    }
+    .login-card h1 { font-family: 'DM Serif Display', serif; font-weight: 400; font-size: 24px; }
+    .login-card p  { font-size: 13px; color: var(--muted); }
+    .login-error   { color: var(--danger); font-size: 13px; min-height: 1em; }
+
+    /* ── SESIÓN ── */
+    .session-info { font-size: 12px; color: var(--muted); text-align: right; line-height: 1.3; }
+    .session-info strong { color: var(--text); font-weight: 500; }
+    .store-select {
+      padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px;
+      font-family: inherit; font-size: 12px; background: var(--surface); color: var(--text);
+    }
+    .admin-only { display: none !important; }
+    body.is-admin .admin-only { display: revert !important; }
+
+    /* ── ADMINISTRACIÓN ── */
+    .admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 1rem; }
+    .admin-grid .form-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+    .admin-grid input, .admin-grid select { min-width: 0; width: 100%; }
+    .form-group select {
+      padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+      font-family: inherit; font-size: 14px; background: var(--surface);
+    }
   </style>
 </head>
 <body>
+
+<!-- LOGIN -->
+<div class="login-overlay" id="login-overlay">
+  <form class="login-card" onsubmit="event.preventDefault(); iniciarSesion()">
+    <h1>Kiosco Domingo</h1>
+    <p>Ingresá con tu usuario para continuar.</p>
+    <div class="form-group">
+      <label for="login-user">Usuario</label>
+      <input type="text" id="login-user" autocomplete="username" required />
+    </div>
+    <div class="form-group">
+      <label for="login-pass">Contraseña</label>
+      <input type="password" id="login-pass" autocomplete="current-password" required />
+    </div>
+    <div class="login-error" id="login-error"></div>
+    <button class="btn btn-primary" type="submit" id="login-btn">Ingresar</button>
+  </form>
+</div>
 
 <!-- HEADER -->
 <header>
@@ -518,9 +576,15 @@
     <button class="tab" onclick="showTab('productos')">Productos</button>
     <button class="tab" onclick="showTab('nuevo')">+ Nuevo</button>
     <button class="tab" onclick="showTab('resumen')">Cierre de caja</button>
+    <button class="tab admin-only" onclick="showTab('admin')">Administración</button>
   </nav>
 
   <div class="header-right">
+    <select class="store-select admin-only" id="store-select" onchange="cambiarLocal(this.value)"></select>
+    <div class="session-info">
+      <strong id="session-user"></strong><br><span id="session-store"></span>
+    </div>
+    <button class="btn btn-secondary btn-sm" onclick="cerrarSesion()">Salir</button>
     <span class="clock" id="clock"></span>
   </div>
 </header>
@@ -609,6 +673,67 @@
       </div>
     </div>
 
+    <!-- SECCIÓN: ADMINISTRACIÓN (solo ADMIN) -->
+    <div class="section" id="sec-admin">
+      <div class="admin-grid">
+        <div class="form-card">
+          <h2>Nuevo local</h2>
+          <div class="form-grid">
+            <div class="form-group full">
+              <label>Nombre</label>
+              <input type="text" id="ns-name" placeholder="Local Centro" />
+            </div>
+            <div class="form-group full">
+              <label>Dirección</label>
+              <input type="text" id="ns-address" placeholder="Av. Siempre Viva 123" />
+            </div>
+          </div>
+          <div style="margin-top:1.25rem">
+            <button class="btn btn-primary" onclick="crearLocal()">Crear local</button>
+          </div>
+        </div>
+
+        <div class="form-card">
+          <h2>Nuevo usuario</h2>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Usuario</label>
+              <input type="text" id="nu-username" placeholder="cajero.centro" autocomplete="off" />
+            </div>
+            <div class="form-group">
+              <label>Contraseña (mín. 10)</label>
+              <input type="password" id="nu-password" autocomplete="new-password" />
+            </div>
+            <div class="form-group">
+              <label>Rol</label>
+              <select id="nu-role" onchange="document.getElementById('nu-store').disabled = this.value === 'ADMIN'">
+                <option value="CASHIER">Cajero (un local)</option>
+                <option value="ADMIN">Administrador (todos)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Local</label>
+              <select id="nu-store"></select>
+            </div>
+          </div>
+          <div style="margin-top:1.25rem">
+            <button class="btn btn-primary" onclick="crearUsuario()">Crear usuario</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Usuario</th><th>Rol</th><th>Local</th><th>Estado</th><th></th></tr>
+          </thead>
+          <tbody id="usuarios-tbody">
+            <tr><td colspan="5" class="loading">Cargando usuarios...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- SECCIÓN: RESUMEN -->
     <div class="section" id="sec-resumen">
       <div class="summary-grid" id="summary-grid">
@@ -663,7 +788,87 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  const API = 'http://localhost:4000';
+  // Misma URL desde la que se sirve la página (funciona en Electron y en Docker)
+  const API = '';
+
+  // ── Sesión ──────────────────────────────────
+  // El token se guarda en sessionStorage: se borra al cerrar la ventana.
+  let sesion = null;          // { token, user }
+  let localSeleccionado = ''; // Solo ADMIN: '' = todos los locales
+
+  function leerSesion() {
+    try { return JSON.parse(sessionStorage.getItem('sesion')); } catch { return null; }
+  }
+  function guardarSesion(s) {
+    try { s ? sessionStorage.setItem('sesion', JSON.stringify(s)) : sessionStorage.removeItem('sesion'); } catch {}
+  }
+
+  /** fetch con token. Si el ADMIN eligió un local, se envía como ?storeId= */
+  async function api(path, opciones = {}) {
+    const url = new URL(API + path, location.origin);
+    if (sesion?.user.role === 'ADMIN' && localSeleccionado) url.searchParams.set('storeId', localSeleccionado);
+    const r = await fetch(url, {
+      ...opciones,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(sesion && { Authorization: 'Bearer ' + sesion.token }),
+        ...opciones.headers,
+      },
+    });
+    if (r.status === 401 && sesion) {
+      cerrarSesion();
+      toast('La sesión venció. Ingresá de nuevo.', 'error');
+      throw new Error('No autenticado');
+    }
+    return r.json();
+  }
+
+  async function iniciarSesion() {
+    const username = document.getElementById('login-user').value.trim();
+    const password = document.getElementById('login-pass').value;
+    const errorEl  = document.getElementById('login-error');
+    const btn      = document.getElementById('login-btn');
+    errorEl.textContent = '';
+    btn.disabled = true;
+    try {
+      const data = await api('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
+      if (!data.success) { errorEl.textContent = data.error || 'No se pudo ingresar'; return; }
+      sesion = { token: data.token, user: data.user };
+      guardarSesion(sesion);
+      document.getElementById('login-pass').value = '';
+      await mostrarApp();
+    } catch (e) {
+      errorEl.textContent = 'Error de conexión con el servidor';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function cerrarSesion() {
+    sesion = null;
+    localSeleccionado = '';
+    guardarSesion(null);
+    carrito = [];
+    renderCarrito();
+    document.body.classList.remove('is-admin');
+    document.getElementById('login-overlay').classList.remove('hidden');
+    document.getElementById('login-user').focus();
+  }
+
+  async function mostrarApp() {
+    const u = sesion.user;
+    document.body.classList.toggle('is-admin', u.role === 'ADMIN');
+    document.getElementById('session-user').textContent  = u.username;
+    document.getElementById('session-store').textContent = u.role === 'ADMIN' ? 'Administrador' : (u.storeName || '');
+    document.getElementById('login-overlay').classList.add('hidden');
+    if (u.role === 'ADMIN') await cargarLocales();
+    document.getElementById('barcode-input').focus();
+  }
+
+  // ── Escape de HTML (evita inyección de código vía nombres de productos/usuarios) ──
+  function esc(v) {
+    return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
 
   // ── Estado ──────────────────────────────────
   let carrito = [];
@@ -689,6 +894,7 @@
     document.getElementById('sec-' + tab).classList.add('active');
     if (tab === 'productos') cargarProductos();
     if (tab === 'resumen')   cargarResumen();
+    if (tab === 'admin')     cargarAdmin();
     if (tab === 'venta') document.getElementById('barcode-input').focus();
   }
 
@@ -711,9 +917,8 @@
     const code = document.getElementById('barcode-input').value.trim();
     if (!code) return;
     try {
-      const r = await fetch(`${API}/products/barcode/${encodeURIComponent(code)}`);
-      const data = await r.json();
-      if (!data.success) { toast('Producto no encontrado', 'error'); return; }
+      const data = await api(`/products/barcode/${encodeURIComponent(code)}`);
+      if (!data.success) { toast(data.error || 'Producto no encontrado', 'error'); return; }
       const p = data.data;
       productoActual = p;
       qtyActual = 1;
@@ -775,7 +980,7 @@
     container.innerHTML = carrito.map((item, idx) => `
       <div class="cart-item">
         <div class="cart-item-info">
-          <div class="cart-item-name">${item.description}</div>
+          <div class="cart-item-name">${esc(item.description)}</div>
           <div class="cart-item-detail">${item.quantity} x ${fmt(item.unitPrice)}</div>
         </div>
         <span class="cart-item-subtotal">${fmt(item.subtotal)}</span>
@@ -812,8 +1017,7 @@
         paymentMethod: metodoPago,
         printTicket: false,
       };
-      const r    = await fetch(`${API}/sales`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      const data = await r.json();
+      const data = await api('/sales', { method: 'POST', body: JSON.stringify(body) });
       if (!data.success) { toast(data.error || 'Error al registrar la venta', 'error'); return; }
       toast(`Venta #${data.saleId} registrada — ${fmt(data.grandTotal)}`);
       vaciarCarrito();
@@ -825,8 +1029,8 @@
     document.getElementById('productos-tbody').innerHTML =
       '<tr><td colspan="5" class="loading">Cargando...</td></tr>';
     try {
-      const r    = await fetch(`${API}/products`);
-      const data = await r.json();
+      const data = await api('/products');
+      if (!data.success) throw new Error(data.error);
       if (!data.data.length) {
         document.getElementById('productos-tbody').innerHTML =
           '<tr><td colspan="5" class="loading">No hay productos cargados todavía.</td></tr>';
@@ -839,10 +1043,10 @@
           ? '<span class="badge badge-low">Stock bajo</span>'
           : '<span class="badge badge-ok">OK</span>';
         return `<tr>
-          <td><strong>${p.description}</strong></td>
-          <td style="font-family:monospace;font-size:12px;color:var(--muted)">${p.barcode}</td>
+          <td><strong>${esc(p.description)}</strong></td>
+          <td style="font-family:monospace;font-size:12px;color:var(--muted)">${esc(p.barcode)}</td>
           <td>${fmt(p.price)}</td>
-          <td>${p.stock}</td>
+          <td>${esc(p.stock)}</td>
           <td>${badge}</td>
         </tr>`;
       }).join('');
@@ -863,12 +1067,10 @@
       toast('Completá todos los campos obligatorios', 'error'); return;
     }
     try {
-      const r    = await fetch(`${API}/products`, {
+      const data = await api('/products', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ barcode, description: desc, price, cost, stock }),
       });
-      const data = await r.json();
       if (!data.success) { toast(data.error || 'Error al crear el producto', 'error'); return; }
       toast(`"${desc}" creado correctamente`);
       limpiarForm();
@@ -887,8 +1089,8 @@
     document.getElementById('summary-grid').innerHTML =
       '<div class="loading" style="grid-column:1/-1">Cargando resumen...</div>';
     try {
-      const r    = await fetch(`${API}/sales/daily-summary`);
-      const data = await r.json();
+      const data = await api('/sales/daily-summary');
+      if (!data.success) throw new Error(data.error);
       const s    = data.data;
       document.getElementById('summary-grid').innerHTML = `
         <div class="stat-card">
@@ -913,6 +1115,101 @@
         '<div class="loading" style="grid-column:1/-1">Error al cargar el resumen.</div>';
     }
   }
+
+  // ── ADMINISTRACIÓN (solo ADMIN) ──────────────
+  let locales = [];
+
+  async function cargarLocales() {
+    const data = await api('/stores');
+    if (!data.success) return;
+    locales = data.data;
+    const activos = locales.filter(l => l.active);
+    document.getElementById('store-select').innerHTML =
+      '<option value="">Todos los locales</option>' +
+      activos.map(l => `<option value="${Number(l.id)}">${esc(l.name)}</option>`).join('');
+    document.getElementById('store-select').value = localSeleccionado;
+    document.getElementById('nu-store').innerHTML =
+      activos.map(l => `<option value="${Number(l.id)}">${esc(l.name)}</option>`).join('');
+  }
+
+  function cambiarLocal(id) {
+    localSeleccionado = id;
+    carrito = [];
+    renderCarrito();
+    const activa = document.querySelector('.section.active')?.id;
+    if (activa === 'sec-productos') cargarProductos();
+    if (activa === 'sec-resumen')   cargarResumen();
+    toast(id ? 'Operando en ' + (locales.find(l => String(l.id) === id)?.name || '') : 'Viendo todos los locales');
+  }
+
+  async function cargarAdmin() {
+    await cargarLocales();
+    const tbody = document.getElementById('usuarios-tbody');
+    try {
+      const data = await api('/users');
+      if (!data.success) throw new Error(data.error);
+      tbody.innerHTML = data.data.map(u => `<tr>
+          <td><strong>${esc(u.username)}</strong></td>
+          <td>${u.role === 'ADMIN' ? 'Administrador' : 'Cajero'}</td>
+          <td>${esc(u.store?.name ?? '—')}</td>
+          <td>${u.active ? '<span class="badge badge-ok">Activo</span>' : '<span class="badge badge-out">Inactivo</span>'}</td>
+          <td>${u.id === sesion.user.id ? '' :
+            `<button class="btn btn-secondary btn-sm" onclick="cambiarEstadoUsuario(${Number(u.id)}, ${!u.active})">${u.active ? 'Desactivar' : 'Activar'}</button>`}</td>
+        </tr>`).join('');
+    } catch (e) {
+      tbody.innerHTML = '<tr><td colspan="5" class="loading">Error al cargar usuarios.</td></tr>';
+    }
+  }
+
+  async function crearLocal() {
+    const name    = document.getElementById('ns-name').value.trim();
+    const address = document.getElementById('ns-address').value.trim();
+    if (!name) { toast('El nombre del local es obligatorio', 'error'); return; }
+    try {
+      const data = await api('/stores', { method: 'POST', body: JSON.stringify({ name, ...(address && { address }) }) });
+      if (!data.success) { toast(data.error || 'Error al crear el local', 'error'); return; }
+      toast(`Local "${name}" creado`);
+      document.getElementById('ns-name').value = '';
+      document.getElementById('ns-address').value = '';
+      cargarAdmin();
+    } catch (e) { toast('Error de conexión', 'error'); }
+  }
+
+  async function crearUsuario() {
+    const username = document.getElementById('nu-username').value.trim();
+    const password = document.getElementById('nu-password').value;
+    const role     = document.getElementById('nu-role').value;
+    const storeId  = role === 'CASHIER' ? Number(document.getElementById('nu-store').value) : null;
+    if (role === 'CASHIER' && !storeId) { toast('Primero creá un local', 'error'); return; }
+    try {
+      const data = await api('/users', { method: 'POST', body: JSON.stringify({ username, password, role, storeId }) });
+      if (!data.success) { toast(data.error || 'Error al crear el usuario', 'error'); return; }
+      toast(`Usuario "${username}" creado`);
+      document.getElementById('nu-username').value = '';
+      document.getElementById('nu-password').value = '';
+      cargarAdmin();
+    } catch (e) { toast('Error de conexión', 'error'); }
+  }
+
+  async function cambiarEstadoUsuario(id, active) {
+    try {
+      const data = await api(`/users/${id}`, { method: 'PATCH', body: JSON.stringify({ active }) });
+      if (!data.success) { toast(data.error || 'Error al actualizar', 'error'); return; }
+      cargarAdmin();
+    } catch (e) { toast('Error de conexión', 'error'); }
+  }
+
+  // ── Arranque: validar la sesión guardada contra el servidor ──
+  (async () => {
+    sesion = leerSesion();
+    if (!sesion) return cerrarSesion();
+    try {
+      const data = await api('/auth/me');
+      if (!data.success) return cerrarSesion();
+      sesion.user = data.user;
+      await mostrarApp();
+    } catch { cerrarSesion(); }
+  })();
 </script>
 </body>
 </html>
