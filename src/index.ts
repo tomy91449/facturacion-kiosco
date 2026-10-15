@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import path from "path";
 import { apiRouter } from "./api/router";
 import { ensureAdminUser } from "./modules/auth/bootstrap";
+import { getJwtSecret } from "./modules/auth/auth.service";
 
 dotenv.config();
 
@@ -17,7 +18,9 @@ app.use(express.static(path.join(process.cwd(), "public")));
 // Rutas de la API
 app.use("/", apiRouter);
 
-ensureAdminUser()
+Promise.resolve()
+  .then(() => getJwtSecret()) // Falla al arrancar si falta JWT_SECRET
+  .then(() => ensureAdminUser())
   .then(() => {
     app.listen(Number(PORT), "127.0.0.1", () => {
       console.log(`🚀 Backend corriendo en http://localhost:${PORT}`);

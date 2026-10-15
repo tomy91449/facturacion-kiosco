@@ -1,11 +1,19 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { ProductService, SaleService } from "../modules/sale/sale.service";
 import { prisma } from "../db";
+import { authRouter } from "./auth.routes";
+import { requireAuth } from "./auth.middleware";
 
 export const apiRouter = Router();
 
 const asyncHandler = (fn: (req: Request, res: Response, next: NextFunction) => Promise<any>) =>
   (req: Request, res: Response, next: NextFunction) => fn(req, res, next).catch(next);
+
+// ── AUTENTICACIÓN ──────────────────────────────────────────
+// /auth/login es la única ruta pública; todo lo que sigue exige token.
+
+apiRouter.use("/auth", authRouter);
+apiRouter.use(requireAuth);
 
 // ── PRODUCTOS ──────────────────────────────────────────────
 
