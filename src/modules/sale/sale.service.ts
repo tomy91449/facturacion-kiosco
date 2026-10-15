@@ -24,16 +24,21 @@ export interface SaleResult {
   error?:      string;
 }
 
+/** Los códigos se guardan y buscan normalizados para que coincidan siempre */
+export function normalizeBarcode(barcode: string): string {
+  return barcode.trim().toUpperCase();
+}
+
 // ── ProductService ───────────────────────────
+// Todas las operaciones reciben el storeId: un local nunca ve datos de otro.
 export const ProductService = {
 
-  async findByBarcode(barcode: string) {
+  async findByBarcode(storeId: number, barcode: string) {
     if (!barcode || barcode.trim().length === 0) {
       throw new Error("El código de barras no puede estar vacío");
     }
-    const normalizedBarcode = barcode.trim().toUpperCase();
     const product = await prisma.product.findUnique({
-      where:   { barcode: normalizedBarcode },
+      where:   { storeId_barcode: { storeId, barcode: normalizeBarcode(barcode) } },
       include: { category: true },
     });
     if (!product) return null;
@@ -41,25 +46,28 @@ export const ProductService = {
     return product;
   },
 
-  async getLowStockProducts() {
+  /** storeId null = todos los locales (solo para ADMIN) */
+  async getLowStockProducts(storeId: number | null) {
     return prisma.product.findMany({
-      where:   { active: true, stock: { lte: 5 } },
+      where:   { active: true, stock: { lte: 5 }, ...(storeId !== null && { storeId }) },
       orderBy: { stock: "asc" },
     });
   },
 
-  async updatePrice(productId: number, price: number, cost?: number) {
-    return prisma.product.update({
-      where: { id: productId },
+  async updatePrice(storeId: number, productId: number, price: number, cost?: number) {
+    const { count } = await prisma.product.updateMany({
+      where: { id: productId, storeId },
       data:  { price, ...(cost !== undefined && { cost }) },
     });
+    if (count === 0) return null;
+    return prisma.product.findUnique({ where: { id: productId } });
   },
 };
 
 // ── SaleService ──────────────────────────────
 export const SaleService = {
 
-  async registerSale(input: CreateSaleInput): Promise<SaleResult> {
+  async registerSale(storeId: number, input: CreateSaleInput): Promise<SaleResult> {
     const { items, customerId, paymentMethod, discount = 0, taxRate = 0, notes, printTicket = false } = input;
 
     if (!items || items.length === 0) {
@@ -69,11 +77,16 @@ export const SaleService = {
     try {
       const productIds = items.map((i) => i.productId);
       const products   = await prisma.product.findMany({
-        where: { id: { in: productIds }, active: true },
+        where: { id: { in: productIds }, active: true, storeId },
       });
 
       if (products.length !== productIds.length) {
         return { success: false, error: "Algunos productos no fueron encontrados o están inactivos" };
+      }
+
+      if (customerId != null) {
+        const customer = await prisma.customer.findFirst({ where: { id: customerId, storeId } });
+        if (!customer) return { success: false, error: "Cliente no encontrado" };
       }
 
       const productMap = new Map(products.map((p) => [p.id, p]));
@@ -101,6 +114,7 @@ export const SaleService = {
       const sale = await prisma.$transaction(async (tx) => {
         const newSale = await tx.sale.create({
           data: {
+            storeId,
             customerId,
             paymentMethod,
             total:      saleTotal,
@@ -133,10 +147,11 @@ export const SaleService = {
     }
   },
 
-  async cancelSale(saleId: number) {
+  async cancelSale(storeId: number, saleId: number) {
     return prisma.$transaction(async (tx) => {
       const sale = await tx.sale.findUnique({ where: { id: saleId }, include: { items: true } });
-      if (!sale) throw new Error(`Venta ${saleId} no encontrada`);
+      // Una venta de otro local se trata igual que una inexistente
+      if (!sale || sale.storeId !== storeId) throw new Error(`Venta ${saleId} no encontrada`);
       if (sale.status !== "COMPLETED") throw new Error(`La venta ya está en estado ${sale.status}`);
 
       await Promise.all(
@@ -149,12 +164,13 @@ export const SaleService = {
     });
   },
 
-  async getDailySummary(date: Date = new Date()) {
+  /** storeId null = todos los locales (solo para ADMIN) */
+  async getDailySummary(storeId: number | null, date: Date = new Date()) {
     const start = new Date(date); start.setHours(0, 0, 0, 0);
     const end   = new Date(date); end.setHours(23, 59, 59, 999);
 
     const sales = await prisma.sale.findMany({
-      where: { date: { gte: start, lte: end }, status: "COMPLETED" },
+      where: { date: { gte: start, lte: end }, status: "COMPLETED", ...(storeId !== null && { storeId }) },
     });
 
     const grandTotal = sales.reduce((acc, s) => acc + s.grandTotal, 0);

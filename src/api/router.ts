@@ -1,13 +1,12 @@
 import { Router, Request, Response, NextFunction } from "express";
-import { ProductService, SaleService } from "../modules/sale/sale.service";
+import { ProductService, SaleService, normalizeBarcode } from "../modules/sale/sale.service";
 import { prisma } from "../db";
 import { authRouter } from "./auth.routes";
+import { adminRouter } from "./admin.routes";
 import { requireAuth } from "./auth.middleware";
+import { asyncHandler, readStoreScope, requireStoreScope } from "./store-scope";
 
 export const apiRouter = Router();
-
-const asyncHandler = (fn: (req: Request, res: Response, next: NextFunction) => Promise<any>) =>
-  (req: Request, res: Response, next: NextFunction) => fn(req, res, next).catch(next);
 
 // ── AUTENTICACIÓN ──────────────────────────────────────────
 // /auth/login es la única ruta pública; todo lo que sigue exige token.
@@ -15,12 +14,20 @@ const asyncHandler = (fn: (req: Request, res: Response, next: NextFunction) => P
 apiRouter.use("/auth", authRouter);
 apiRouter.use(requireAuth);
 
+// ── ADMINISTRACIÓN (locales y usuarios, solo ADMIN) ────────
+
+apiRouter.use(adminRouter);
+
 // ── PRODUCTOS ──────────────────────────────────────────────
 
 apiRouter.get(
   "/products",
-  asyncHandler(async (_req, res) => {
-    const products = await prisma.product.findMany({ orderBy: { description: "asc" } });
+  asyncHandler(async (req, res) => {
+    const storeId  = readStoreScope(req);
+    const products = await prisma.product.findMany({
+      where:   storeId !== null ? { storeId } : {},
+      orderBy: { description: "asc" },
+    });
     return res.json({ success: true, data: products, count: products.length });
   })
 );
@@ -28,12 +35,20 @@ apiRouter.get(
 apiRouter.post(
   "/products",
   asyncHandler(async (req, res) => {
+    const storeId = await requireStoreScope(req, res);
+    if (storeId === null) return;
+
     const { barcode, description, price, cost, stock, minStock, categoryId } = req.body;
     if (!barcode || !description || price == null || cost == null) {
       return res.status(400).json({ success: false, error: "Faltan campos obligatorios: barcode, description, price, cost" });
     }
     const product = await prisma.product.create({
-      data: { barcode, description, price, cost, stock: stock ?? 0, minStock: minStock ?? 0, categoryId: categoryId ?? null },
+      data: {
+        storeId,
+        barcode: normalizeBarcode(String(barcode)),
+        description, price, cost,
+        stock: stock ?? 0, minStock: minStock ?? 0, categoryId: categoryId ?? null,
+      },
     });
     return res.status(201).json({ success: true, data: product });
   })
@@ -42,7 +57,10 @@ apiRouter.post(
 apiRouter.get(
   "/products/barcode/:code",
   asyncHandler(async (req, res) => {
-    const product = await ProductService.findByBarcode(req.params.code);
+    const storeId = await requireStoreScope(req, res);
+    if (storeId === null) return;
+
+    const product = await ProductService.findByBarcode(storeId, req.params.code);
     if (!product) return res.status(404).json({ success: false, error: `Producto no encontrado: ${req.params.code}` });
     return res.json({ success: true, data: product });
   })
@@ -50,8 +68,8 @@ apiRouter.get(
 
 apiRouter.get(
   "/products/low-stock",
-  asyncHandler(async (_req, res) => {
-    const products = await ProductService.getLowStockProducts();
+  asyncHandler(async (req, res) => {
+    const products = await ProductService.getLowStockProducts(readStoreScope(req));
     return res.json({ success: true, data: products, count: products.length });
   })
 );
@@ -59,11 +77,15 @@ apiRouter.get(
 apiRouter.patch(
   "/products/:id/price",
   asyncHandler(async (req, res) => {
+    const storeId = await requireStoreScope(req, res);
+    if (storeId === null) return;
+
     const { price, cost } = req.body as { price: number; cost?: number };
     if (typeof price !== "number" || price < 0) {
       return res.status(400).json({ success: false, error: "Precio invalido" });
     }
-    const updated = await ProductService.updatePrice(Number(req.params.id), price, cost);
+    const updated = await ProductService.updatePrice(storeId, Number(req.params.id), price, cost);
+    if (!updated) return res.status(404).json({ success: false, error: "Producto no encontrado" });
     return res.json({ success: true, data: updated });
   })
 );
@@ -73,6 +95,9 @@ apiRouter.patch(
 apiRouter.post(
   "/sales",
   asyncHandler(async (req, res) => {
+    const storeId = await requireStoreScope(req, res);
+    if (storeId === null) return;
+
     const body = req.body;
     if (!body.items?.length) {
       return res.status(400).json({ success: false, error: "Se requiere al menos un item" });
@@ -81,7 +106,7 @@ apiRouter.post(
     if (!validMethods.includes(body.paymentMethod)) {
       return res.status(400).json({ success: false, error: "Metodo de pago invalido. Usar: CASH, CARD, TRANSFER, QR, MIXED" });
     }
-    const result = await SaleService.registerSale(body);
+    const result = await SaleService.registerSale(storeId, body);
     if (!result.success) return res.status(422).json(result);
     return res.status(201).json(result);
   })
@@ -90,7 +115,10 @@ apiRouter.post(
 apiRouter.post(
   "/sales/:id/cancel",
   asyncHandler(async (req, res) => {
-    const sale = await SaleService.cancelSale(Number(req.params.id));
+    const storeId = await requireStoreScope(req, res);
+    if (storeId === null) return;
+
+    const sale = await SaleService.cancelSale(storeId, Number(req.params.id));
     return res.json({ success: true, data: sale });
   })
 );
@@ -98,17 +126,19 @@ apiRouter.post(
 apiRouter.get(
   "/sales/daily-summary",
   asyncHandler(async (req, res) => {
-    const date = req.query.date ? new Date(req.query.date as string) : new Date();
-    const summary = await SaleService.getDailySummary(date);
+    const date    = req.query.date ? new Date(req.query.date as string) : new Date();
+    const summary = await SaleService.getDailySummary(readStoreScope(req), date);
     return res.json({ success: true, data: summary });
   })
 );
 
 apiRouter.get(
   "/sales",
-  asyncHandler(async (_req, res) => {
-    const sales = await prisma.sale.findMany({
-      include: { items: { include: { product: true } }, customer: true },
+  asyncHandler(async (req, res) => {
+    const storeId = readStoreScope(req);
+    const sales   = await prisma.sale.findMany({
+      where:   storeId !== null ? { storeId } : {},
+      include: { items: { include: { product: true } }, customer: true, store: { select: { id: true, name: true } } },
       orderBy: { date: "desc" },
       take: 50,
     });
@@ -118,7 +148,11 @@ apiRouter.get(
 
 // ── ERROR HANDLER ──────────────────────────────────────────
 
-apiRouter.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+apiRouter.use((err: Error & { code?: string }, _req: Request, res: Response, _next: NextFunction) => {
+  // Violación de restricción única de Prisma (código de barras, usuario o local repetido)
+  if (err.code === "P2002") {
+    return res.status(409).json({ success: false, error: "Ya existe un registro con ese valor" });
+  }
   console.error("[API Error]", err.message);
   res.status(500).json({ success: false, error: err.message });
 });

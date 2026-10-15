@@ -18,6 +18,9 @@ model Store {
   active    Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at")
   users     User[]
+  products  Product[]
+  customers Customer[]
+  sales     Sale[]
 
   @@map("stores")
 }
@@ -50,7 +53,8 @@ model Category {
 
 model Product {
   id          Int        @id @default(autoincrement())
-  barcode     String     @unique
+  storeId     Int        @map("store_id")
+  barcode     String
   description String
   price       Float
   cost        Float
@@ -61,29 +65,36 @@ model Product {
   createdAt   DateTime   @default(now()) @map("created_at")
   updatedAt   DateTime   @updatedAt @map("updated_at")
 
+  store       Store      @relation(fields: [storeId], references: [id])
   category    Category?  @relation(fields: [categoryId], references: [id])
   saleItems   SaleItem[]
 
+  // El mismo código de barras puede existir en distintos locales
+  @@unique([storeId, barcode])
   @@index([categoryId])
-  @@index([active, stock])
+  @@index([storeId, active, stock])
   @@map("products")
 }
 
 model Customer {
   id        Int      @id @default(autoincrement())
+  storeId   Int      @map("store_id")
   name      String
-  taxId     String?  @unique @map("tax_id")
+  taxId     String?  @map("tax_id")
   email     String?
   phone     String?
   address   String?
   createdAt DateTime @default(now()) @map("created_at")
+  store     Store    @relation(fields: [storeId], references: [id])
   sales     Sale[]
 
+  @@unique([storeId, taxId])
   @@map("customers")
 }
 
 model Sale {
   id            Int        @id @default(autoincrement())
+  storeId       Int        @map("store_id")
   date          DateTime   @default(now())
   customerId    Int?       @map("customer_id")
   total         Float
@@ -95,9 +106,11 @@ model Sale {
   notes         String?
   createdAt     DateTime   @default(now()) @map("created_at")
 
+  store         Store      @relation(fields: [storeId], references: [id])
   customer      Customer?  @relation(fields: [customerId], references: [id])
   items         SaleItem[]
 
+  @@index([storeId, date])
   @@index([date])
   @@index([customerId])
   @@map("sales")
