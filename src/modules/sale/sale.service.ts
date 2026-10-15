@@ -1,7 +1,4 @@
-import { PrismaClient } from "../../generated/client";
-import { createPrinter } from "../print/printer.service";
-
-const prisma = new PrismaClient({ log: ["warn", "error"] });
+import { prisma } from "../../db";
 
 // ── Tipos ────────────────────────────────────
 export interface SaleItemInput {

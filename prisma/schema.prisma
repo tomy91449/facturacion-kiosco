@@ -8,6 +8,36 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Cada local del negocio. Toda la facturación queda asociada a un local.
+model Store {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  address   String?
+  phone     String?
+  taxId     String?  @map("tax_id")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  users     User[]
+
+  @@map("stores")
+}
+
+// role: "ADMIN" (dueño, sin local, ve todo) | "CASHIER" (atado a un local)
+model User {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  passwordHash String   @map("password_hash")
+  role         String   @default("CASHIER")
+  storeId      Int?     @map("store_id")
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  store        Store?   @relation(fields: [storeId], references: [id])
+
+  @@index([storeId])
+  @@map("users")
+}
+
 model Category {
   id          Int       @id @default(autoincrement())
   name        String    @unique
