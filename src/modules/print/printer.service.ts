@@ -16,7 +16,7 @@
 
 import net from "net";
 import { SerialPort } from "serialport"; // npm install serialport
-import type { Sale, SaleItem, Product } from "@prisma/client";
+import type { Sale, SaleItem, Product } from "../../generated/client";
 
 // ─────────────────────────────────────────────
 // COMANDOS ESC/POS (bytes de control)
