@@ -13,7 +13,7 @@ export async function ensureAdminUser(): Promise<void> {
   const password = process.env.ADMIN_PASSWORD;
 
   if (!username || !password) {
-    console.warn("⚠️ No hay usuarios. Definí ADMIN_USERNAME y ADMIN_PASSWORD en el .env para crear el administrador.");
+    console.warn("⚠️ No hay usuarios: creá el administrador desde la pantalla de primer uso (o con ADMIN_USERNAME y ADMIN_PASSWORD en el .env).");
     return;
   }
   if (password.length < 10) {

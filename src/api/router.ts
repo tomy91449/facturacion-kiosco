@@ -3,15 +3,18 @@ import { ProductService, SaleService, normalizeBarcode } from "../modules/sale/s
 import { prisma } from "../db";
 import { authRouter } from "./auth.routes";
 import { adminRouter } from "./admin.routes";
+import { paymentRouter } from "./payment.routes";
+import { setupRouter } from "./setup.routes";
 import { requireAuth } from "./auth.middleware";
 import { asyncHandler, readStoreScope, requireStoreScope } from "./store-scope";
 
 export const apiRouter = Router();
 
 // ── AUTENTICACIÓN ──────────────────────────────────────────
-// /auth/login es la única ruta pública; todo lo que sigue exige token.
+// /auth/login y /setup (primer uso) son las únicas rutas públicas; todo lo que sigue exige token.
 
 apiRouter.use("/auth", authRouter);
+apiRouter.use("/setup", setupRouter);
 apiRouter.use(requireAuth);
 
 // ── ADMINISTRACIÓN (locales y usuarios, solo ADMIN) ────────
@@ -92,25 +95,8 @@ apiRouter.patch(
 
 // ── VENTAS ─────────────────────────────────────────────────
 
-apiRouter.post(
-  "/sales",
-  asyncHandler(async (req, res) => {
-    const storeId = await requireStoreScope(req, res);
-    if (storeId === null) return;
-
-    const body = req.body;
-    if (!body.items?.length) {
-      return res.status(400).json({ success: false, error: "Se requiere al menos un item" });
-    }
-    const validMethods = ["CASH", "CARD", "TRANSFER", "QR", "MIXED"];
-    if (!validMethods.includes(body.paymentMethod)) {
-      return res.status(400).json({ success: false, error: "Metodo de pago invalido. Usar: CASH, CARD, TRANSFER, QR, MIXED" });
-    }
-    const result = await SaleService.registerSale(storeId, body);
-    if (!result.success) return res.status(422).json(result);
-    return res.status(201).json(result);
-  })
-);
+// Cobrar (POST /sales) y seguimiento de pagos: QR, alias, efectivo, posnet
+apiRouter.use(paymentRouter);
 
 apiRouter.post(
   "/sales/:id/cancel",

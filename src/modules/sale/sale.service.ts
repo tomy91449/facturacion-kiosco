@@ -1,4 +1,7 @@
 import { prisma } from "../../db";
+import { Prisma } from "../../generated/client";
+
+type Tx = Prisma.TransactionClient;
 
 // ── Tipos ────────────────────────────────────
 export interface SaleItemInput {
@@ -11,18 +14,26 @@ export interface CreateSaleInput {
   customerId?:   number;
   paymentMethod: string;
   discount?:     number;
-  taxRate?:      number;
   notes?:        string;
-  printTicket?:  boolean;
 }
 
-export interface SaleResult {
-  success:     boolean;
-  saleId?:     number;
-  grandTotal?: number;
-  printed?:    boolean;
-  error?:      string;
+/** Venta ya validada y con precios calculados en el servidor, lista para guardarse */
+export interface SaleDraft {
+  storeId:       number;
+  customerId?:   number;
+  paymentMethod: string;
+  total:         number;
+  discount:      number;
+  tax:           number;
+  grandTotal:    number;
+  notes?:        string;
+  lineItems:     { productId: number; quantity: number; unitPrice: number; subtotal: number }[];
 }
+
+export type SaleStatus = "PENDING_PAYMENT" | "COMPLETED" | "CANCELLED";
+
+/** Redondea a centavos para que los montos coincidan exactamente con el proveedor de pago */
+export const toCents = (n: number) => Math.round(n * 100) / 100;
 
 /** Los códigos se guardan y buscan normalizados para que coincidan siempre */
 export function normalizeBarcode(barcode: string): string {
@@ -67,84 +78,91 @@ export const ProductService = {
 // ── SaleService ──────────────────────────────
 export const SaleService = {
 
-  async registerSale(storeId: number, input: CreateSaleInput): Promise<SaleResult> {
-    const { items, customerId, paymentMethod, discount = 0, taxRate = 0, notes, printTicket = false } = input;
+  /**
+   * Valida la venta y calcula los montos con los precios de la base.
+   * Nunca se confía en precios ni totales que mande el navegador.
+   */
+  async prepareSale(storeId: number, input: CreateSaleInput): Promise<{ draft: SaleDraft } | { error: string }> {
+    const { items, customerId, paymentMethod, discount = 0, notes } = input;
 
-    if (!items || items.length === 0) {
-      return { success: false, error: "La venta debe tener al menos un ítem" };
+    if (!items || items.length === 0) return { error: "La venta debe tener al menos un ítem" };
+
+    // El mismo producto en dos líneas se suma en una sola
+    const quantities = new Map<number, number>();
+    for (const item of items) quantities.set(item.productId, (quantities.get(item.productId) ?? 0) + item.quantity);
+
+    const products = await prisma.product.findMany({
+      where: { id: { in: [...quantities.keys()] }, active: true, storeId },
+    });
+    if (products.length !== quantities.size) {
+      return { error: "Algunos productos no fueron encontrados o están inactivos" };
     }
 
-    try {
-      const productIds = items.map((i) => i.productId);
-      const products   = await prisma.product.findMany({
-        where: { id: { in: productIds }, active: true, storeId },
-      });
-
-      if (products.length !== productIds.length) {
-        return { success: false, error: "Algunos productos no fueron encontrados o están inactivos" };
-      }
-
-      if (customerId != null) {
-        const customer = await prisma.customer.findFirst({ where: { id: customerId, storeId } });
-        if (!customer) return { success: false, error: "Cliente no encontrado" };
-      }
-
-      const productMap = new Map(products.map((p) => [p.id, p]));
-
-      for (const item of items) {
-        const product = productMap.get(item.productId)!;
-        if (product.stock < item.quantity) {
-          return { success: false, error: `Stock insuficiente para "${product.description}". Disponible: ${product.stock}` };
-        }
-      }
-
-      let saleTotal = 0;
-      const lineItems: any[] = [];
-
-      for (const item of items) {
-        const product  = productMap.get(item.productId)!;
-        const subtotal = product.price * item.quantity;
-        saleTotal     += subtotal;
-        lineItems.push({ productId: item.productId, quantity: item.quantity, unitPrice: product.price, subtotal });
-      }
-
-      const taxAmount  = saleTotal * taxRate;
-      const grandTotal = saleTotal - discount + taxAmount;
-
-      const sale = await prisma.$transaction(async (tx) => {
-        const newSale = await tx.sale.create({
-          data: {
-            storeId,
-            customerId,
-            paymentMethod,
-            total:      saleTotal,
-            discount,
-            tax:        taxAmount,
-            grandTotal,
-            notes,
-            items: { create: lineItems },
-          },
-          include: { items: { include: { product: true } }, customer: true },
-        });
-
-        await Promise.all(
-          items.map((item) =>
-            tx.product.update({
-              where: { id: item.productId },
-              data:  { stock: { decrement: item.quantity } },
-            })
-          )
-        );
-
-        return newSale;
-      });
-
-      return { success: true, saleId: sale.id, grandTotal: sale.grandTotal, printed: false };
-
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Error interno";
-      return { success: false, error: message };
+    if (customerId != null) {
+      const customer = await prisma.customer.findFirst({ where: { id: customerId, storeId } });
+      if (!customer) return { error: "Cliente no encontrado" };
     }
+
+    const lineItems: SaleDraft["lineItems"] = [];
+    let total = 0;
+    for (const product of products) {
+      const quantity = quantities.get(product.id)!;
+      if (product.stock < quantity) {
+        return { error: `Stock insuficiente para "${product.description}". Disponible: ${product.stock}` };
+      }
+      const subtotal = toCents(product.price * quantity);
+      total += subtotal;
+      lineItems.push({ productId: product.id, quantity, unitPrice: product.price, subtotal });
+    }
+
+    total = toCents(total);
+    if (discount > total) return { error: "El descuento no puede superar el total" };
+    const grandTotal = toCents(total - discount);
+    if (grandTotal <= 0) return { error: "El total de la venta debe ser mayor a cero" };
+
+    return { draft: { storeId, customerId, paymentMethod, total, discount, tax: 0, grandTotal, notes, lineItems } };
+  },
+
+  /**
+   * Guarda la venta y descuenta (o reserva, si queda pendiente de pago) el stock.
+   * El descuento es condicional: si otra caja vendió la última unidad, falla en vez de dejar stock negativo.
+   */
+  async createSale(tx: Tx, draft: SaleDraft, status: SaleStatus) {
+    const { lineItems, ...data } = draft;
+    const sale = await tx.sale.create({ data: { ...data, status, items: { create: lineItems } } });
+
+    for (const item of lineItems) {
+      const { count } = await tx.product.updateMany({
+        where: { id: item.productId, storeId: draft.storeId, stock: { gte: item.quantity } },
+        data:  { stock: { decrement: item.quantity } },
+      });
+      if (count === 0) throw new Error("Stock insuficiente: otra caja vendió el producto recién. Revisá el ticket.");
+    }
+    return sale;
+  },
+
+  /** Pendiente → completada. Devuelve false si la venta ya no estaba pendiente. */
+  async completePendingSale(tx: Tx, saleId: number): Promise<boolean> {
+    const { count } = await tx.sale.updateMany({
+      where: { id: saleId, status: "PENDING_PAYMENT" },
+      data:  { status: "COMPLETED" },
+    });
+    return count === 1;
+  },
+
+  /** Pendiente → cancelada, devolviendo el stock reservado. Idempotente. */
+  async releasePendingSale(tx: Tx, saleId: number): Promise<boolean> {
+    const { count } = await tx.sale.updateMany({
+      where: { id: saleId, status: "PENDING_PAYMENT" },
+      data:  { status: "CANCELLED" },
+    });
+    if (count === 0) return false;
+
+    const items = await tx.saleItem.findMany({ where: { saleId } });
+    for (const item of items) {
+      await tx.product.update({ where: { id: item.productId }, data: { stock: { increment: item.quantity } } });
+    }
+    return true;
   },
 
   async cancelSale(storeId: number, saleId: number) {

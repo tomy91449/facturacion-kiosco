@@ -1,0 +1,40 @@
+KIOSCO DOMINGO — INSTALACIÓN
+============================
+
+REQUISITOS DE LA PC
+- Windows 10 u 11 de 64 bits, 8 GB de RAM recomendados.
+- Docker Desktop instalado: https://www.docker.com/products/docker-desktop/
+  (No hace falta crear cuenta ni iniciar sesión.)
+
+INSTALAR (una sola vez)
+1. Instalá Docker Desktop y reiniciá la PC si lo pide.
+2. Abrí Docker Desktop y esperá a que abajo a la izquierda diga "Engine running".
+3. En Docker Desktop > Settings > General, activá
+   "Start Docker Desktop when you sign in to your computer".
+   Así el sistema arranca solo al prender la PC.
+4. Descomprimí este .zip en una carpeta fija, por ejemplo C:\KioscoDomingo
+   (no lo dejes en Descargas ni en el Escritorio).
+5. Doble clic en instalar.bat y respondé:
+   - nombre del comercio
+   - usuario y contraseña del administrador (mínimo 10 caracteres)
+6. Se abre el navegador en http://localhost:4000. Entrá con el administrador y en
+   "Administración" creá los locales, sus cajeros y el alias para transferencias.
+
+USAR DESDE OTRAS CAJAS DE LA MISMA RED
+- Al terminar, instalar.bat muestra una dirección como http://192.168.1.50:4000.
+  Abrila en el navegador de las otras PCs o tablets.
+- Si Windows pregunta por el firewall, permití el acceso en "Redes privadas".
+
+ACTUALIZAR A UNA VERSIÓN NUEVA
+1. Reemplazá kiosco-domingo.tar por el nuevo (no borres el archivo .env).
+2. Doble clic en instalar.bat. Los datos y la configuración se conservan.
+
+RESPALDOS
+- Doble clic en respaldar.bat copia la base de datos a la carpeta "respaldos".
+  Hacelo seguido y guardá una copia fuera de la PC (pendrive, Google Drive).
+
+IMPORTANTE
+- No borres el archivo .env: tiene la clave de seguridad del sistema.
+- Los datos viven dentro de Docker (volumen "kiosco-domingo_kiosco-data"). Desinstalar
+  Docker Desktop o ejecutar "docker volume rm" BORRA las ventas. Respaldá antes.
+- La impresora de tickets tiene que ser de red (se configura en .env: PRINTER_HOST).

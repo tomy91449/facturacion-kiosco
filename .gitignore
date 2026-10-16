@@ -14,6 +14,7 @@ prisma/*.db-journal
 .env
 .env.*
 !.env.example
+!instalador/.env.ejemplo
 
 # Archivos de autenticación o caché de sesiones locales
 .wwebjs_auth/
@@ -26,3 +27,13 @@ Thumbs.db
 
 # Clon duplicado del proyecto
 facturacionKiosco/
+
+# Capturas y logs de pruebas automatizadas del navegador
+.playwright-mcp/
+
+# Paquete de instalación generado por scripts/crear-paquete.ps1
+paquete-instalador/
+kiosco-domingo-instalador.zip
+*.tar
+instalador/.env
+instalador/respaldos/

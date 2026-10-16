@@ -48,6 +48,32 @@ La base de datos queda en el volumen `kiosco-data`, así que sobrevive a las act
 > Si el servidor va a ser accesible desde Internet, ponelo detrás de un proxy con HTTPS
 > (por ejemplo Caddy o Nginx): sin HTTPS, usuario, contraseña y token viajan en texto plano.
 
+## 💻 Programa de escritorio (.exe) con licencia por PC
+
+Un instalador de Windows que corre todo en la PC del cliente, sin Docker ni internet.
+
+**Armar el instalador:**
+```bash
+npm run dist
+```
+Queda en `release/Kiosco Domingo Setup <versión>.exe`. Para una versión nueva, subí `version` en `package.json`.
+
+**Licencias** (la primera vez: `npm run licencia -- crear-claves`):
+1. El cliente instala y abre el programa: le aparece un código del equipo (`KD-XXXX-XXXX-XXXX`).
+2. Generás su clave: `npm run licencia -- KD-XXXX-XXXX-XXXX "Nombre del cliente"`.
+3. El cliente la pega y queda activado para siempre en esa PC.
+
+La clave privada vive en `%USERPROFILE%\KioscoDomingo-licencias` (fuera del repo, junto a `registro.csv`
+con las licencias emitidas). **Guardá una copia fuera de la PC**: si se pierde, los instaladores ya
+entregados no se pueden activar en equipos nuevos.
+
+**Datos del cliente:** `%APPDATA%\Kiosco Domingo\datos` (base `pos.db`, respaldos diarios de los últimos
+30 días en `respaldos\`, impresora y datos del ticket en `configuracion.env`, errores en `registro.log`).
+Desinstalar o actualizar el programa no los borra. La primera vez se crea el administrador desde la pantalla.
+
+> Sin certificado de firma de código, Windows muestra "Windows protegió su PC" al instalar:
+> "Más información" → "Ejecutar de todas formas".
+
 ## 👥 Usuarios y locales
 
 | Rol | Qué puede hacer |
@@ -56,3 +82,41 @@ La base de datos queda en el volumen `kiosco-data`, así que sobrevive a las act
 | **Cajero** | Vender, cargar productos y ver el cierre de caja **solo de su local**. |
 
 Toda la API exige el header `Authorization: Bearer <token>`, que se obtiene en `POST /auth/login`.
+
+## 💳 Medios de pago
+
+| Método | Cómo se confirma |
+|--------|------------------|
+| **Efectivo, Tarjeta (posnet no integrado), Mixto** | Al instante, en el mostrador. |
+| **QR** | Automático: el sistema genera un QR por venta y consulta al proveedor hasta saber si se pagó. Vence a los 10 minutos. |
+| **Alias** | Manual: la venta queda pendiente y **solo un administrador** la confirma después de ver la transferencia en la cuenta. |
+
+- Mientras un cobro está pendiente, la venta queda en `PENDING_PAYMENT` con el stock **reservado**.
+  Si se cancela, se rechaza o vence, la venta se anula y el stock vuelve.
+- El cierre de caja solo suma ventas cobradas.
+- El alias y el titular se configuran por local en **Administración → Alias para transferencias**.
+- **Cobros pendientes** (en Administración) lista transferencias por confirmar y cobros sin respuesta del proveedor.
+
+### QR
+
+Se elige con `QR_PROVIDER` en el `.env`:
+
+- vacío: QR deshabilitado.
+- `simulator`: QR de **prueba**, no entra dinero. El administrador ve botones para simular el pago o el rechazo.
+
+### Agregar un proveedor (Mercado Pago, Ualá, un posnet integrado)
+
+Cada medio de pago implementa la interfaz `PaymentProvider` (`src/modules/payment/payment-provider.ts`).
+Para sumar uno nuevo:
+
+1. Crear `src/modules/payment/providers/<nombre>.provider.ts` con `start`, `checkStatus` y `cancel`.
+2. Registrarlo en `src/modules/payment/provider-registry.ts`.
+
+Ventas, pantallas y cierre de caja no cambian.
+
+### Garantías del módulo de pagos
+
+- Los montos se calculan en el servidor.
+- Cada cobro lleva una clave de idempotencia, así que un doble clic o un reintento no duplica la venta.
+- Si el proveedor no responde, el cobro queda `UNKNOWN` y se vuelve a consultar. Nunca se da por fallido sin saberlo.
+- Un proceso en segundo plano revisa los cobros abiertos cada 30 segundos.

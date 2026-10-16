@@ -4,26 +4,42 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Kiosco Domingo — POS</title>
+  <link rel="icon" href="icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;600;700&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:       #f7f5f0;
+      /* Verdes del logo */
+      --accent:       #1b7a3a;
+      --accent-hover: #14602d;
+      --accent-dark:  #13582a;
+      --accent-soft:  #e6f4ea;
+      --lime:         #7cc242;
+      --accent2:      #f4c430;
+
+      --bg:       #f4f0e3;   /* crema de vitrina */
       --surface:  #ffffff;
-      --border:   #e8e4dc;
-      --text:     #1a1a18;
-      --muted:    #8a8780;
-      --accent:   #2d6a4f;
-      --accent2:  #e9c46a;
+      --border:   #e2dac6;
+      --text:     #1d2a20;
+      --muted:    #5f6b62;
       --danger:   #c0392b;
-      --radius:   10px;
-      --shadow:   0 1px 3px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.05);
+      --radius:   12px;
+      --shadow:   0 1px 3px rgba(29,42,32,0.08), 0 6px 16px rgba(29,42,32,0.06);
+
+      --font-display: 'Rubik', system-ui, sans-serif;
+      --font-body:    'Nunito Sans', system-ui, sans-serif;
+
+      /* Fondo de vitrina: reflejo del vidrio + velo crema + estantes con productos */
+      --vitrina:
+        linear-gradient(115deg, transparent 0 28%, rgba(255,255,255,.35) 28% 31%, transparent 31% 62%, rgba(255,255,255,.25) 62% 63.5%, transparent 63.5%),
+        linear-gradient(rgba(244,240,227,.80), rgba(244,240,227,.80)),
+        url('vitrina.svg');
     }
 
     body {
-      font-family: 'DM Sans', sans-serif;
+      font-family: var(--font-body);
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
@@ -31,15 +47,31 @@
       grid-template-rows: auto 1fr;
     }
 
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
     /* ── HEADER ── */
     header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
+      position: relative;
+      z-index: 10;
+      background: var(--accent-dark);
+      color: #fff;
       padding: 0 2rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
       height: 64px;
+    }
+
+    /* Toldo rayado de kiosco debajo del header */
+    .toldo {
+      position: absolute;
+      top: 100%; left: 0; right: 0;
+      height: 14px;
+      pointer-events: none;
+      background: repeating-linear-gradient(90deg, var(--accent) 0 28px, #fff 28px 56px);
+      -webkit-mask: radial-gradient(14px at 50% 0, #000 98%, transparent) 0 0 / 28px 100%;
+              mask: radial-gradient(14px at 50% 0, #000 98%, transparent) 0 0 / 28px 100%;
+      filter: drop-shadow(0 2px 2px rgba(0,0,0,.12));
     }
 
     .logo {
@@ -49,16 +81,12 @@
     }
 
     .logo-icon {
-      width: 38px;
-      height: 38px;
-      background: var(--accent);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: #fff;
+      flex-shrink: 0;
     }
-
-    .logo-icon svg { width: 22px; height: 22px; }
 
     .logo-text {
       display: flex;
@@ -67,17 +95,17 @@
     }
 
     .logo-name {
-      font-family: 'DM Serif Display', serif;
-      font-size: 18px;
-      color: var(--text);
-      letter-spacing: -0.3px;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 19px;
+      color: #fff;
     }
 
     .logo-sub {
       font-size: 11px;
-      color: var(--muted);
-      font-weight: 300;
-      letter-spacing: 0.5px;
+      color: rgba(255,255,255,.8);
+      font-weight: 600;
+      letter-spacing: 0.6px;
       text-transform: uppercase;
     }
 
@@ -89,8 +117,7 @@
 
     .clock {
       font-size: 13px;
-      color: var(--muted);
-      font-weight: 300;
+      color: rgba(255,255,255,.85);
     }
 
     /* ── NAV TABS ── */
@@ -100,19 +127,33 @@
     }
 
     .tab {
-      padding: 6px 16px;
-      border-radius: 6px;
-      font-size: 13px;
-      font-weight: 500;
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 700;
       cursor: pointer;
       border: none;
       background: transparent;
-      color: var(--muted);
-      transition: all 0.15s;
+      color: rgba(255,255,255,.85);
+      transition: background-color 0.15s, color 0.15s;
     }
 
-    .tab:hover { background: var(--bg); color: var(--text); }
-    .tab.active { background: var(--accent); color: #fff; }
+    .tab:hover { background: rgba(255,255,255,.14); color: #fff; }
+    .tab.active { background: #fff; color: var(--accent-dark); }
+
+    header { gap: 16px; }
+    .tab, .logo-name, .logo-sub, .clock, header .btn { white-space: nowrap; }
+
+    /* Pantallas de caja chicas: compactar el header */
+    @media (max-width: 1280px) {
+      header { padding: 0 1rem; }
+      .logo-sub, .clock { display: none; }
+      .tab { padding: 8px 12px; }
+    }
+
+    header .btn-secondary { background: transparent; color: #fff; border-color: rgba(255,255,255,.5); }
+    header .btn-secondary:hover { background: rgba(255,255,255,.14); }
 
     /* ── MAIN LAYOUT ── */
     main {
@@ -123,13 +164,16 @@
       overflow: hidden;
     }
 
-    /* ── PANEL IZQUIERDO ── */
+    /* ── PANEL IZQUIERDO (la vitrina) ── */
     .left-panel {
-      padding: 1.5rem;
+      padding: 2rem 1.5rem 1.5rem;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
       gap: 1.25rem;
+      background: var(--vitrina);
+      background-size: auto, auto, 400px 260px;
+      background-color: var(--bg);
     }
 
     /* ── SEARCH BAR ── */
@@ -143,7 +187,7 @@
       padding: 10px 14px;
       border: 1.5px solid var(--border);
       border-radius: var(--radius);
-      font-family: 'DM Sans', sans-serif;
+      font-family: var(--font-body);
       font-size: 14px;
       background: var(--surface);
       outline: none;
@@ -155,16 +199,16 @@
     .btn {
       padding: 10px 18px;
       border-radius: var(--radius);
-      font-family: 'DM Sans', sans-serif;
-      font-size: 13px;
-      font-weight: 500;
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 700;
       cursor: pointer;
-      border: none;
-      transition: all 0.15s;
+      border: 1px solid transparent;
+      transition: background-color 0.15s, border-color 0.15s, color 0.15s;
     }
 
     .btn-primary { background: var(--accent); color: #fff; }
-    .btn-primary:hover { background: #235c42; }
+    .btn-primary:hover { background: var(--accent-hover); }
     .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
     .btn-secondary:hover { background: var(--bg); }
     .btn-danger { background: var(--danger); color: #fff; }
@@ -199,7 +243,7 @@
     .product-info p  { font-size: 13px; color: var(--muted); }
 
     .product-price {
-      font-family: 'DM Serif Display', serif;
+      font-family: var(--font-display); font-weight: 600;
       font-size: 22px;
       color: var(--accent);
       margin-right: 16px;
@@ -259,7 +303,7 @@
     }
 
     tr:last-child td { border-bottom: none; }
-    tr:hover td { background: #fafaf8; }
+    tr:hover td { background: #f6f9f3; }
 
     .badge {
       display: inline-block;
@@ -289,7 +333,7 @@
       padding: 9px 12px;
       border: 1.5px solid var(--border);
       border-radius: 8px;
-      font-family: 'DM Sans', sans-serif;
+      font-family: var(--font-body);
       font-size: 14px;
       background: var(--surface);
       outline: none;
@@ -307,7 +351,7 @@
     }
 
     .form-card h2 {
-      font-family: 'DM Serif Display', serif;
+      font-family: var(--font-display); font-weight: 600;
       font-size: 18px;
       margin-bottom: 1.25rem;
     }
@@ -330,7 +374,7 @@
     }
 
     .cart-header h2 {
-      font-family: 'DM Serif Display', serif;
+      font-family: var(--font-display); font-weight: 600;
       font-size: 18px;
     }
 
@@ -417,7 +461,7 @@
 
     .total-row.grand {
       font-size: 20px;
-      font-family: 'DM Serif Display', serif;
+      font-family: var(--font-display); font-weight: 600;
       color: var(--text);
       padding-top: 8px;
       border-top: 1px solid var(--border);
@@ -438,7 +482,7 @@
       border-radius: 8px;
       border: 1.5px solid var(--border);
       background: var(--surface);
-      font-family: 'DM Sans', sans-serif;
+      font-family: var(--font-body);
       font-size: 11px;
       font-weight: 500;
       cursor: pointer;
@@ -448,7 +492,51 @@
     }
 
     .pay-btn:hover { border-color: var(--accent); color: var(--accent); }
-    .pay-btn.selected { border-color: var(--accent); background: #eaf4ee; color: var(--accent); }
+    .pay-btn.selected { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+    .pay-btn:disabled { opacity: .45; cursor: not-allowed; border-color: var(--border); color: var(--muted); background: var(--surface); }
+
+    /* ── COBRO PENDIENTE (QR / ALIAS) ── */
+    .pay-overlay {
+      position: fixed; inset: 0; z-index: 90;
+      background: rgba(19, 40, 26, .55);
+      display: flex; align-items: center; justify-content: center;
+      padding: 1rem;
+    }
+    .pay-overlay.hidden { display: none; }
+    .pay-card {
+      background: var(--surface);
+      border-top: 6px solid var(--accent);
+      border-radius: var(--radius);
+      box-shadow: 0 16px 48px rgba(0,0,0,.25);
+      width: 100%; max-width: 400px;
+      padding: 1.5rem;
+      display: flex; flex-direction: column; align-items: center; gap: .9rem;
+      text-align: center;
+    }
+    .pay-card h2 { font-family: var(--font-display); font-weight: 600; font-size: 20px; }
+    .pay-amount { font-family: var(--font-display); font-weight: 700; font-size: 34px; color: var(--accent-dark); }
+    .pay-qr { width: 240px; height: 240px; image-rendering: pixelated; border: 1px solid var(--border); border-radius: 8px; }
+    .pay-alias {
+      width: 100%; padding: .9rem; border: 2px dashed var(--accent); border-radius: 10px; background: var(--accent-soft);
+    }
+    .pay-alias strong { display: block; font-family: var(--font-display); font-size: 24px; color: var(--accent-dark); word-break: break-all; }
+    .pay-alias span { font-size: 13px; color: var(--muted); }
+    .pay-status { font-size: 14px; font-weight: 700; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+    .pay-status.ok    { color: var(--accent); }
+    .pay-status.error { color: var(--danger); }
+    .pay-spinner {
+      width: 14px; height: 14px; border-radius: 50%;
+      border: 2px solid var(--border); border-top-color: var(--accent);
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .pay-hint { font-size: 13px; color: var(--muted); }
+    .pay-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; width: 100%; }
+    .pay-actions .btn { flex: 1 1 140px; }
+    .pay-sim { width: 100%; border-top: 1px dashed var(--border); padding-top: .75rem; display: flex; flex-direction: column; gap: 6px; }
+    #cobros-tbody .row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+    .form-card .table-wrap { overflow-x: auto; }
+    .pay-sim small { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
 
     /* ── TOAST ── */
     .toast {
@@ -492,13 +580,15 @@
     }
 
     .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 6px; }
-    .stat-value { font-family: 'DM Serif Display', serif; font-size: 26px; color: var(--accent); }
+    .stat-value { font-family: var(--font-display); font-weight: 600; font-size: 26px; color: var(--accent); }
     .stat-sub   { font-size: 12px; color: var(--muted); margin-top: 2px; }
 
     /* ── LOGIN ── */
     .login-overlay {
       position: fixed; inset: 0; z-index: 100;
-      background: var(--bg);
+      background: var(--vitrina);
+      background-size: auto, auto, 400px 260px;
+      background-color: var(--bg);
       display: flex; align-items: center; justify-content: center;
       padding: 1rem;
     }
@@ -506,19 +596,22 @@
     .login-card {
       background: var(--surface);
       border: 1px solid var(--border);
+      border-top: 6px solid var(--accent);
       border-radius: var(--radius);
-      box-shadow: var(--shadow);
+      box-shadow: 0 12px 40px rgba(29,42,32,.18);
       padding: 2rem;
       width: 100%; max-width: 360px;
       display: flex; flex-direction: column; gap: 1rem;
     }
-    .login-card h1 { font-family: 'DM Serif Display', serif; font-weight: 400; font-size: 24px; }
+    .login-logo { width: 84px; height: 84px; border-radius: 50%; align-self: center; }
+    .login-card h1 { font-family: var(--font-display); font-weight: 700; font-size: 26px; text-align: center; color: var(--accent-dark); }
+    .login-card p  { text-align: center; }
     .login-card p  { font-size: 13px; color: var(--muted); }
     .login-error   { color: var(--danger); font-size: 13px; min-height: 1em; }
 
     /* ── SESIÓN ── */
-    .session-info { font-size: 12px; color: var(--muted); text-align: right; line-height: 1.3; }
-    .session-info strong { color: var(--text); font-weight: 500; }
+    .session-info { font-size: 12px; color: rgba(255,255,255,.85); text-align: right; line-height: 1.3; }
+    .session-info strong { color: #fff; font-weight: 700; }
     .store-select {
       padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px;
       font-family: inherit; font-size: 12px; background: var(--surface); color: var(--text);
@@ -534,6 +627,10 @@
       padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
       font-family: inherit; font-size: 14px; background: var(--surface);
     }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+    }
   </style>
 </head>
 <body>
@@ -541,6 +638,7 @@
 <!-- LOGIN -->
 <div class="login-overlay" id="login-overlay">
   <form class="login-card" onsubmit="event.preventDefault(); iniciarSesion()">
+    <img class="login-logo" src="icon.png" alt="" />
     <h1>Kiosco Domingo</h1>
     <p>Ingresá con tu usuario para continuar.</p>
     <div class="form-group">
@@ -556,15 +654,33 @@
   </form>
 </div>
 
+<!-- PRIMER USO: crear el administrador (solo si el sistema no tiene usuarios) -->
+<div class="login-overlay hidden" id="setup-overlay">
+  <form class="login-card" onsubmit="event.preventDefault(); crearAdministrador()">
+    <img class="login-logo" src="icon.png" alt="" />
+    <h1>Bienvenido</h1>
+    <p>Creá el usuario administrador. Con él vas a dar de alta los locales y los cajeros.</p>
+    <div class="form-group">
+      <label for="setup-user">Usuario</label>
+      <input type="text" id="setup-user" autocomplete="username" value="admin" required minlength="3" maxlength="64" />
+    </div>
+    <div class="form-group">
+      <label for="setup-pass">Contraseña (mínimo 10 caracteres)</label>
+      <input type="password" id="setup-pass" autocomplete="new-password" required minlength="10" />
+    </div>
+    <div class="form-group">
+      <label for="setup-pass2">Repetí la contraseña</label>
+      <input type="password" id="setup-pass2" autocomplete="new-password" required minlength="10" />
+    </div>
+    <div class="login-error" id="setup-error"></div>
+    <button class="btn btn-primary" type="submit" id="setup-btn">Crear administrador</button>
+  </form>
+</div>
+
 <!-- HEADER -->
 <header>
   <div class="logo">
-    <div class="logo-icon">
-      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-        <polyline points="9 22 9 12 15 12 15 22"/>
-      </svg>
-    </div>
+    <img class="logo-icon" src="icon.png" alt="" />
     <div class="logo-text">
       <span class="logo-name">Kiosco Domingo</span>
       <span class="logo-sub">Sistema de punto de venta</span>
@@ -587,6 +703,7 @@
     <button class="btn btn-secondary btn-sm" onclick="cerrarSesion()">Salir</button>
     <span class="clock" id="clock"></span>
   </div>
+  <div class="toldo" aria-hidden="true"></div>
 </header>
 
 <main>
@@ -720,6 +837,41 @@
             <button class="btn btn-primary" onclick="crearUsuario()">Crear usuario</button>
           </div>
         </div>
+
+        <div class="form-card">
+          <h2>Alias para transferencias</h2>
+          <div class="form-grid">
+            <div class="form-group full">
+              <label for="al-store">Local</label>
+              <select id="al-store" onchange="mostrarAliasLocal()"></select>
+            </div>
+            <div class="form-group">
+              <label for="al-alias">Alias</label>
+              <input type="text" id="al-alias" placeholder="kiosco.domingo" autocomplete="off" />
+            </div>
+            <div class="form-group">
+              <label for="al-holder">Titular</label>
+              <input type="text" id="al-holder" placeholder="Nombre que ve el cliente" />
+            </div>
+          </div>
+          <div style="margin-top:1.25rem">
+            <button class="btn btn-primary" onclick="guardarAlias()">Guardar alias</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-card">
+        <h2>Cobros pendientes</h2>
+        <div class="table-wrap" style="box-shadow:none">
+          <table>
+            <thead>
+              <tr><th>Venta</th><th>Local</th><th>Método</th><th>Monto</th><th>Estado</th><th></th></tr>
+            </thead>
+            <tbody id="cobros-tbody">
+              <tr><td colspan="6" class="loading">Cargando cobros...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div class="table-wrap">
@@ -769,7 +921,7 @@
       <div class="payment-methods">
         <button class="pay-btn selected" data-method="CASH" onclick="selectPay(this)">Efectivo</button>
         <button class="pay-btn" data-method="CARD" onclick="selectPay(this)">Tarjeta</button>
-        <button class="pay-btn" data-method="TRANSFER" onclick="selectPay(this)">Transferencia</button>
+        <button class="pay-btn" data-method="TRANSFER" onclick="selectPay(this)">Alias</button>
         <button class="pay-btn" data-method="QR" onclick="selectPay(this)">QR</button>
         <button class="pay-btn" data-method="MIXED" onclick="selectPay(this)">Mixto</button>
       </div>
@@ -784,9 +936,34 @@
   </div>
 </main>
 
+<!-- COBRO PENDIENTE: QR o alias -->
+<div class="pay-overlay hidden" id="pay-overlay" role="dialog" aria-modal="true" aria-labelledby="pay-title">
+  <div class="pay-card">
+    <h2 id="pay-title"></h2>
+    <div class="pay-amount" id="pay-amount"></div>
+    <canvas class="pay-qr" id="pay-qr" width="240" height="240" aria-label="Código QR para pagar"></canvas>
+    <div class="pay-alias" id="pay-alias">
+      <span>Transferir a</span>
+      <strong id="pay-alias-value"></strong>
+      <span id="pay-alias-holder"></span>
+    </div>
+    <div class="pay-status" id="pay-status" aria-live="polite"></div>
+    <div class="pay-hint" id="pay-hint"></div>
+    <div class="pay-actions" id="pay-actions"></div>
+    <div class="pay-sim" id="pay-sim">
+      <small>Modo prueba (simulador de QR)</small>
+      <div class="pay-actions">
+        <button class="btn btn-secondary btn-sm" onclick="simularPago('approve')">Simular pago aprobado</button>
+        <button class="btn btn-secondary btn-sm" onclick="simularPago('reject')">Simular rechazo</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
+<script src="vendor/qrcode-generator-1.4.4.js"></script>
 <script>
   // Misma URL desde la que se sirve la página (funciona en Electron y en Docker)
   const API = '';
@@ -848,8 +1025,8 @@
     sesion = null;
     localSeleccionado = '';
     guardarSesion(null);
-    carrito = [];
-    renderCarrito();
+    cerrarCobro();
+    vaciarCarrito();
     document.body.classList.remove('is-admin');
     document.getElementById('login-overlay').classList.remove('hidden');
     document.getElementById('login-user').focus();
@@ -861,6 +1038,7 @@
     document.getElementById('session-user').textContent  = u.username;
     document.getElementById('session-store').textContent = u.role === 'ADMIN' ? 'Administrador' : (u.storeName || '');
     document.getElementById('login-overlay').classList.add('hidden');
+    await cargarMetodosPago();
     if (u.role === 'ADMIN') await cargarLocales();
     document.getElementById('barcode-input').focus();
   }
@@ -955,6 +1133,7 @@
     document.getElementById('product-found').classList.remove('show');
     productoActual = null;
     qtyActual = 1;
+    claveCobro = null;
     renderCarrito();
     document.getElementById('barcode-input').focus();
     toast('Producto agregado al ticket');
@@ -994,34 +1173,221 @@
 
   function quitarItem(idx) {
     carrito.splice(idx, 1);
+    claveCobro = null;
     renderCarrito();
   }
 
   function vaciarCarrito() {
     carrito = [];
+    claveCobro = null;
     renderCarrito();
   }
 
   function selectPay(btn) {
+    if (btn.disabled) return;
     document.querySelectorAll('.pay-btn').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
     metodoPago = btn.dataset.method;
+    claveCobro = null;
+  }
+
+  // ── MÉTODOS DE PAGO DISPONIBLES ──────────────
+  let qrSimulador = false;
+
+  async function cargarMetodosPago() {
+    try {
+      const data = await api('/payments/methods');
+      if (!data.success) return;
+      qrSimulador = data.data.qrSimulator;
+      for (const m of data.data.methods) {
+        const btn = document.querySelector(`.pay-btn[data-method="${m.method}"]`);
+        if (!btn) continue;
+        btn.disabled = !m.enabled;
+        btn.title = m.enabled ? '' : 'No configurado en este sistema';
+      }
+      if (document.querySelector('.pay-btn.selected')?.disabled) selectPay(document.querySelector('.pay-btn[data-method="CASH"]'));
+    } catch {}
   }
 
   // ── COBRAR ───────────────────────────────────
+  // Clave única por cobro: si la red falla y se reintenta, el servidor no duplica la venta.
+  // Se renueva cuando cambia el ticket o el método de pago.
+  let claveCobro = null;
+  let cobroActual = null;   // cobro pendiente que se muestra en el recuadro
+  let cobroTimer  = null;
+  let cobrando    = false;
+
+  function nuevaClave() {
+    if (crypto.randomUUID) return crypto.randomUUID();
+    // randomUUID solo existe en https/localhost; desde otra PC de la red se usa getRandomValues
+    const b = crypto.getRandomValues(new Uint8Array(16));
+    return Array.from(b, x => x.toString(16).padStart(2, '0')).join('');
+  }
+
   async function cobrar() {
     if (carrito.length === 0) { toast('El ticket está vacío', 'error'); return; }
+    if (cobrando) return;
+    cobrando = true;
+    claveCobro ??= nuevaClave();
     try {
       const body = {
         items: carrito.map(i => ({ productId: i.productId, quantity: i.quantity })),
         paymentMethod: metodoPago,
-        printTicket: false,
+        idempotencyKey: claveCobro,
       };
       const data = await api('/sales', { method: 'POST', body: JSON.stringify(body) });
-      if (!data.success) { toast(data.error || 'Error al registrar la venta', 'error'); return; }
-      toast(`Venta #${data.saleId} registrada — ${fmt(data.grandTotal)}`);
+      if (!data.success) { toast(data.error || 'Error al registrar la venta', 'error'); claveCobro = null; return; }
+      if (data.payment.status === 'APPROVED') {
+        toast(`Venta #${data.saleId} cobrada — ${fmt(data.grandTotal)}`);
+        vaciarCarrito();
+      } else {
+        abrirCobro(data.payment);
+      }
+    } catch (e) {
+      // Se conserva la clave: al reintentar, el servidor devuelve el mismo cobro si ya lo había creado
+      toast('Error de conexión. Volvé a tocar Cobrar: no se va a duplicar la venta.', 'error');
+    } finally {
+      cobrando = false;
+    }
+  }
+
+  // ── RECUADRO DE COBRO PENDIENTE (QR / ALIAS) ──
+  function dibujarQr(texto) {
+    const canvas = document.getElementById('pay-qr');
+    const ctx = canvas.getContext('2d');
+    const qr = qrcode(0, 'M');
+    qr.addData(texto);
+    qr.make();
+    const n = qr.getModuleCount(), margen = 4, celda = Math.floor(canvas.width / (n + margen * 2));
+    const offset = Math.floor((canvas.width - celda * n) / 2);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#000';
+    for (let r = 0; r < n; r++)
+      for (let c = 0; c < n; c++)
+        if (qr.isDark(r, c)) ctx.fillRect(offset + c * celda, offset + r * celda, celda, celda);
+  }
+
+  function abrirCobro(pago) {
+    cobroActual = pago;
+    const esQr = pago.method === 'QR';
+    document.getElementById('pay-title').textContent  = esQr ? 'Cobro con QR' : 'Cobro por transferencia';
+    document.getElementById('pay-amount').textContent = fmt(pago.amount);
+    document.getElementById('pay-qr').style.display    = esQr && pago.qrData ? '' : 'none';
+    document.getElementById('pay-alias').style.display = esQr ? 'none' : '';
+    if (esQr && pago.qrData) dibujarQr(pago.qrData);
+    if (!esQr) {
+      document.getElementById('pay-alias-value').textContent  = pago.transfer?.alias || '';
+      document.getElementById('pay-alias-holder').textContent = pago.transfer?.holder ? 'Titular: ' + pago.transfer.holder : '';
+    }
+    document.getElementById('pay-sim').style.display =
+      pago.simulator && sesion?.user.role === 'ADMIN' ? '' : 'none';
+    document.getElementById('pay-overlay').classList.remove('hidden');
+    actualizarCobro(pago);
+    programarConsulta();
+  }
+
+  function cerrarCobro() {
+    clearTimeout(cobroTimer);
+    cobroActual = null;
+    document.getElementById('pay-overlay').classList.add('hidden');
+    document.getElementById('barcode-input').focus();
+  }
+
+  function actualizarCobro(pago) {
+    cobroActual = pago;
+    const status  = document.getElementById('pay-status');
+    const hint    = document.getElementById('pay-hint');
+    const actions = document.getElementById('pay-actions');
+    const esAdmin = sesion?.user.role === 'ADMIN';
+    const esQr    = pago.method === 'QR';
+    status.className = 'pay-status';
+
+    // Con el cobro cerrado, el QR ya no sirve: se oculta para que nadie intente pagarlo
+    if (!['PENDING', 'UNKNOWN'].includes(pago.status)) document.getElementById('pay-qr').style.display = 'none';
+
+    if (pago.status === 'APPROVED') {
+      status.classList.add('ok');
+      status.textContent = '✓ Pago aprobado';
+      hint.textContent = `Venta #${pago.saleId} cobrada.`;
+      actions.innerHTML = '';
+      document.getElementById('pay-sim').style.display = 'none';
+      claveCobro = null;
       vaciarCarrito();
-    } catch(e) { toast('Error de conexión con el servidor', 'error'); }
+      setTimeout(() => { if (cobroActual?.intentId === pago.intentId) cerrarCobro(); }, 1800);
+      return;
+    }
+
+    if (['REJECTED', 'CANCELLED', 'EXPIRED'].includes(pago.status)) {
+      const titulos = { REJECTED: 'Pago rechazado', CANCELLED: 'Cobro cancelado', EXPIRED: 'El QR venció' };
+      status.classList.add('error');
+      status.textContent = titulos[pago.status];
+      hint.textContent = 'El ticket sigue cargado: podés cobrar de nuevo o con otro medio.';
+      actions.innerHTML = '<button class="btn btn-primary" onclick="cerrarCobro()">Volver al ticket</button>';
+      document.getElementById('pay-sim').style.display = 'none';
+      claveCobro = null;
+      return;
+    }
+
+    // PENDING / UNKNOWN
+    const spinner = '<span class="pay-spinner" aria-hidden="true"></span>';
+    if (pago.status === 'UNKNOWN') {
+      status.innerHTML = spinner + 'Verificando con el proveedor…';
+      hint.textContent = pago.failureReason || 'No cierres: puede que el cliente ya haya pagado.';
+    } else if (esQr) {
+      status.innerHTML = spinner + 'Esperando que el cliente pague…';
+      const min = pago.expiresAt ? Math.max(0, Math.ceil((new Date(pago.expiresAt) - Date.now()) / 60000)) : null;
+      hint.textContent = 'El cliente escanea el QR con cualquier billetera o app de banco.' + (min !== null ? ` Vence en ${min} min.` : '');
+    } else {
+      status.innerHTML = spinner + 'Esperando confirmación de la transferencia…';
+      hint.textContent = esAdmin
+        ? 'Verificá en la cuenta que entró exactamente este monto y confirmalo.'
+        : 'Pedile al cliente que transfiera exactamente este monto. Un administrador confirma cuando se acredite.';
+    }
+
+    let botones = '';
+    if (!esQr && esAdmin) botones += '<button class="btn btn-primary" onclick="confirmarTransferencia()">Confirmar transferencia recibida</button>';
+    if (!esQr && !esAdmin) botones += '<button class="btn btn-primary" onclick="dejarPendiente()">Dejar pendiente y seguir</button>';
+    botones += '<button class="btn btn-secondary" onclick="cancelarCobro()">Cancelar cobro</button>';
+    actions.innerHTML = botones;
+  }
+
+  // Consulta el estado mientras el recuadro está abierto (QR cada 2 s, alias cada 5 s)
+  function programarConsulta() {
+    clearTimeout(cobroTimer);
+    if (!cobroActual || !['PENDING', 'UNKNOWN'].includes(cobroActual.status)) return;
+    const id = cobroActual.intentId;
+    cobroTimer = setTimeout(async () => {
+      try {
+        const data = await api(`/payments/${id}`);
+        if (data.success && cobroActual?.intentId === id) actualizarCobro(data.data);
+      } catch {}
+      if (cobroActual?.intentId === id) programarConsulta();
+    }, cobroActual.method === 'QR' ? 2000 : 5000);
+  }
+
+  async function accionCobro(path, body) {
+    if (!cobroActual) return;
+    const id = cobroActual.intentId;
+    try {
+      const data = await api(`/payments/${id}/${path}`, { method: 'POST', body: JSON.stringify(body || {}) });
+      if (!data.success) { toast(data.error || 'No se pudo completar la acción', 'error'); return; }
+      if (cobroActual?.intentId === id) { actualizarCobro(data.data); programarConsulta(); }
+    } catch { toast('Error de conexión con el servidor', 'error'); }
+  }
+
+  const cancelarCobro          = () => accionCobro('cancel');
+  const confirmarTransferencia = () => {
+    if (confirm('¿Verificaste en la cuenta que la transferencia se acreditó por el monto exacto?')) accionCobro('confirm');
+  };
+  const simularPago            = (outcome) => accionCobro('simulate', { outcome });
+
+  function dejarPendiente() {
+    // La venta queda registrada como pendiente (con el stock reservado) hasta que un administrador la confirme
+    toast(`Venta #${cobroActual.saleId} pendiente de confirmación`);
+    claveCobro = null;
+    vaciarCarrito();
+    cerrarCobro();
   }
 
   // ── CARGAR PRODUCTOS ─────────────────────────
@@ -1130,12 +1496,82 @@
     document.getElementById('store-select').value = localSeleccionado;
     document.getElementById('nu-store').innerHTML =
       activos.map(l => `<option value="${Number(l.id)}">${esc(l.name)}</option>`).join('');
+    const alSelect = document.getElementById('al-store');
+    const alPrevio = alSelect.value;
+    alSelect.innerHTML = activos.map(l => `<option value="${Number(l.id)}">${esc(l.name)}</option>`).join('');
+    if (alPrevio) alSelect.value = alPrevio;
+    mostrarAliasLocal();
+  }
+
+  function mostrarAliasLocal() {
+    const local = locales.find(l => String(l.id) === document.getElementById('al-store').value);
+    document.getElementById('al-alias').value  = local?.transferAlias  || '';
+    document.getElementById('al-holder').value = local?.transferHolder || '';
+  }
+
+  async function guardarAlias() {
+    const id     = document.getElementById('al-store').value;
+    const alias  = document.getElementById('al-alias').value.trim();
+    const holder = document.getElementById('al-holder').value.trim();
+    if (!id) { toast('Primero creá un local', 'error'); return; }
+    try {
+      const data = await api(`/stores/${Number(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ transferAlias: alias || null, transferHolder: holder || null }),
+      });
+      if (!data.success) { toast(data.error === 'Datos del local inválidos' ? 'Alias inválido: 6 a 20 letras, números, punto o guion' : (data.error || 'Error al guardar'), 'error'); return; }
+      toast(alias ? `Alias de "${data.data.name}" guardado` : `Se quitó el alias de "${data.data.name}"`);
+      await cargarLocales();
+    } catch (e) { toast('Error de conexión', 'error'); }
+  }
+
+  // ── COBROS PENDIENTES (solo ADMIN) ───────────
+  async function cargarCobrosPendientes() {
+    const tbody = document.getElementById('cobros-tbody');
+    try {
+      const data = await api('/payments/open');
+      if (!data.success) throw new Error(data.error);
+      if (!data.data.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="loading">No hay cobros pendientes.</td></tr>';
+        return;
+      }
+      const metodos = { QR: 'QR', TRANSFER: 'Alias', CARD: 'Tarjeta', CASH: 'Efectivo', MIXED: 'Mixto' };
+      tbody.innerHTML = data.data.map(c => {
+        const alerta = c.status === 'APPROVED'
+          ? '<span class="badge badge-out">Revisar</span>'
+          : c.status === 'UNKNOWN' ? '<span class="badge badge-low">Sin respuesta</span>'
+          : '<span class="badge badge-low">Pendiente</span>';
+        const acciones = c.status === 'APPROVED' ? '' :
+          (c.method === 'TRANSFER'
+            ? `<button class="btn btn-primary btn-sm" onclick="accionCobroLista(${Number(c.intentId)}, 'confirm')">Confirmar</button> ` : '') +
+          `<button class="btn btn-secondary btn-sm" onclick="accionCobroLista(${Number(c.intentId)}, 'cancel')">Cancelar</button>`;
+        return `<tr>
+          <td><strong>#${Number(c.saleId)}</strong><br><span style="font-size:11px;color:var(--muted)">${esc(new Date(c.createdAt).toLocaleString('es-AR'))}</span></td>
+          <td>${esc(c.storeName)}</td>
+          <td>${esc(metodos[c.method] || c.method)}</td>
+          <td>${fmt(c.amount)}</td>
+          <td>${alerta}${c.failureReason ? `<br><span style="font-size:11px;color:var(--muted)">${esc(c.failureReason)}</span>` : ''}</td>
+          <td><div class="row-actions">${acciones}</div></td>
+        </tr>`;
+      }).join('');
+    } catch (e) {
+      tbody.innerHTML = '<tr><td colspan="6" class="loading">Error al cargar cobros.</td></tr>';
+    }
+  }
+
+  async function accionCobroLista(id, accion) {
+    if (accion === 'confirm' && !confirm('¿Verificaste en la cuenta que la transferencia se acreditó por el monto exacto?')) return;
+    try {
+      const data = await api(`/payments/${id}/${accion}`, { method: 'POST', body: '{}' });
+      if (!data.success) { toast(data.error || 'No se pudo completar la acción', 'error'); return; }
+      toast(accion === 'confirm' ? `Venta #${data.data.saleId} confirmada` : `Cobro de la venta #${data.data.saleId} cancelado`);
+      cargarCobrosPendientes();
+    } catch (e) { toast('Error de conexión', 'error'); }
   }
 
   function cambiarLocal(id) {
     localSeleccionado = id;
-    carrito = [];
-    renderCarrito();
+    vaciarCarrito();
     const activa = document.querySelector('.section.active')?.id;
     if (activa === 'sec-productos') cargarProductos();
     if (activa === 'sec-resumen')   cargarResumen();
@@ -1144,6 +1580,7 @@
 
   async function cargarAdmin() {
     await cargarLocales();
+    cargarCobrosPendientes();
     const tbody = document.getElementById('usuarios-tbody');
     try {
       const data = await api('/users');
@@ -1199,8 +1636,46 @@
     } catch (e) { toast('Error de conexión', 'error'); }
   }
 
+  // ── Primer uso: crear el administrador y entrar con él ──
+  async function crearAdministrador() {
+    const username = document.getElementById('setup-user').value.trim();
+    const password = document.getElementById('setup-pass').value;
+    const errorEl  = document.getElementById('setup-error');
+    const btn      = document.getElementById('setup-btn');
+    errorEl.textContent = '';
+    if (password !== document.getElementById('setup-pass2').value) {
+      errorEl.textContent = 'Las contraseñas no coinciden';
+      return;
+    }
+    btn.disabled = true;
+    try {
+      const data = await api('/setup', { method: 'POST', body: JSON.stringify({ username, password }) });
+      if (!data.success) { errorEl.textContent = data.error || 'No se pudo crear el administrador'; return; }
+      document.getElementById('setup-overlay').classList.add('hidden');
+      document.getElementById('login-user').value = username;
+      document.getElementById('login-pass').value = password;
+      document.getElementById('setup-pass').value = '';
+      document.getElementById('setup-pass2').value = '';
+      await iniciarSesion();
+      if (!sesion) document.getElementById('login-overlay').classList.remove('hidden');
+    } catch (e) {
+      errorEl.textContent = 'Error de conexión con el servidor';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
   // ── Arranque: validar la sesión guardada contra el servidor ──
   (async () => {
+    try {
+      const estado = await api('/setup/status');
+      if (estado.needsSetup) {
+        document.getElementById('login-overlay').classList.add('hidden');
+        document.getElementById('setup-overlay').classList.remove('hidden');
+        document.getElementById('setup-pass').focus();
+        return;
+      }
+    } catch {}
     sesion = leerSesion();
     if (!sesion) return cerrarSesion();
     try {

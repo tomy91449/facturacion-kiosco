@@ -1,8 +1,9 @@
 {
   "name": "kiosco-domingo",
+  "productName": "Kiosco Domingo",
   "version": "1.0.0",
   "description": "Sistema POS Kiosco Domingo",
-  "main": "electron.js",
+  "main": "electron/main.js",
   "author": "Kiosco Domingo",
   "scripts": {
     "dev": "tsx watch src/index.ts",
@@ -10,26 +11,31 @@
     "build": "tsc && node -e \"require('fs').cpSync('src/generated','dist/generated',{recursive:true})\"",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "electron": "electron .",
-    "dist": "npm run build && electron-builder"
+    "electron": "npm run build && electron .",
+    "dist": "npm run build && electron-builder --win --x64",
+    "licencia": "node scripts/licencias.js"
   },
   "build": {
     "appId": "com.kioscoDomingo.app",
     "productName": "Kiosco Domingo",
     "icon": "public/icon.png",
+    "directories": {
+      "output": "release"
+    },
     "asar": true,
     "asarUnpack": [
-      "src/generated/client/query_engine-windows.dll.node"
+      "dist/generated/client/query_engine-windows.dll.node"
     ],
     "files": [
       "dist/**/*",
-      "src/generated/client/**/*",
-      "electron.js",
-      "package.json",
+      "electron/**/*",
       "public/**/*",
+      "prisma/migrations/**/*",
+      "package.json",
       "!node_modules/prisma/**",
       "!node_modules/@prisma/engines/**"
     ],
+    "npmRebuild": false,
     "win": {
       "target": "nsis",
       "requestedExecutionLevel": "asInvoker",
@@ -37,7 +43,10 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": "always",
+      "shortcutName": "Kiosco Domingo",
+      "artifactName": "Kiosco Domingo Setup ${version}.${ext}"
     }
   },
   "dependencies": {

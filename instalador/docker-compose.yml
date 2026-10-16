@@ -1,0 +1,22 @@
+# Kiosco Domingo en la PC del comercio.
+# Usa la imagen que trae el paquete (kiosco-domingo.tar): no compila nada ni descarga de internet.
+name: kiosco-domingo
+
+services:
+  kiosco:
+    image: kiosco-domingo:latest
+    pull_policy: never
+    container_name: kiosco-domingo
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      HOST: 0.0.0.0
+      PORT: "4000"
+      DATABASE_URL: file:/app/data/pos.db
+    ports:
+      - "4000:4000"
+    volumes:
+      - kiosco-data:/app/data
+
+volumes:
+  kiosco-data:

@@ -15,6 +15,13 @@ release
 .git
 .gitignore
 facturacionKiosco
-electron.js
+electron
 *.log
 .playwright-mcp
+
+# Instalador y paquetes generados: no van dentro de la imagen
+instalador
+scripts
+paquete-instalador
+*.zip
+*.tar

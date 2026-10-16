@@ -24,6 +24,9 @@ const storeSchema = z.object({
   address: z.string().trim().max(200).optional(),
   phone:   z.string().trim().max(50).optional(),
   taxId:   z.string().trim().max(20).optional(),
+  // Alias bancario/billetera: 6 a 20 caracteres, letras, números, punto y guion
+  transferAlias:  z.string().trim().regex(/^[a-zA-Z0-9.-]{6,20}$/, "Alias inválido").nullable().optional(),
+  transferHolder: z.string().trim().max(100).nullable().optional(),
 });
 
 adminRouter.get(

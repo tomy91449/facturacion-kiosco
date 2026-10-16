@@ -16,11 +16,15 @@ model Store {
   phone     String?
   taxId     String?  @map("tax_id")
   active    Boolean  @default(true)
+  // Datos para cobrar por transferencia: se muestran al cliente en la pantalla de cobro
+  transferAlias  String?  @map("transfer_alias")
+  transferHolder String?  @map("transfer_holder")
   createdAt DateTime @default(now()) @map("created_at")
   users     User[]
   products  Product[]
   customers Customer[]
   sales     Sale[]
+  paymentIntents PaymentIntent[]
 
   @@map("stores")
 }
@@ -102,6 +106,7 @@ model Sale {
   tax           Float      @default(0)
   grandTotal    Float      @map("grand_total")
   paymentMethod String     @map("payment_method")
+  // "PENDING_PAYMENT" (stock reservado, esperando el pago) | "COMPLETED" | "CANCELLED"
   status        String     @default("COMPLETED")
   notes         String?
   createdAt     DateTime   @default(now()) @map("created_at")
@@ -109,6 +114,7 @@ model Sale {
   store         Store      @relation(fields: [storeId], references: [id])
   customer      Customer?  @relation(fields: [customerId], references: [id])
   items         SaleItem[]
+  paymentIntents PaymentIntent[]
 
   @@index([storeId, date])
   @@index([date])
@@ -129,4 +135,38 @@ model SaleItem {
 
   @@index([saleId])
   @@map("sale_items")
+}
+
+// Cada intento de cobrar una venta. Una venta puede tener varios (rechazado → reintento).
+// status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED" | "EXPIRED"
+//       | "UNKNOWN" (se perdió la respuesta del proveedor: nunca se asume que falló)
+model PaymentIntent {
+  id                Int       @id @default(autoincrement())
+  saleId            Int       @map("sale_id")
+  storeId           Int       @map("store_id")
+  method            String    // CASH | CARD | TRANSFER | QR | MIXED
+  provider          String    // cash | card-standalone | manual-transfer | qr-simulator | ...
+  status            String    @default("PENDING")
+  amount            Float
+  // Referencia única que viaja al proveedor para vincular el pago con la venta
+  reference         String    @unique
+  // La genera el navegador: si el mismo cobro llega dos veces, se procesa una sola vez
+  idempotencyKey    String    @unique @map("idempotency_key")
+  providerPaymentId String?   @map("provider_payment_id")
+  qrData            String?   @map("qr_data")
+  failureReason     String?   @map("failure_reason")
+  expiresAt         DateTime? @map("expires_at")
+  createdById       Int       @map("created_by_id")
+  confirmedById     Int?      @map("confirmed_by_id")
+  resolvedAt        DateTime? @map("resolved_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  sale              Sale      @relation(fields: [saleId], references: [id])
+  store             Store     @relation(fields: [storeId], references: [id])
+
+  @@index([saleId])
+  @@index([storeId, status])
+  @@index([status])
+  @@map("payment_intents")
 }

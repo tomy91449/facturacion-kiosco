@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="260" viewBox="0 0 400 260">
+  <!-- Estante de vitrina de kiosco: productos genéricos, sin marcas registradas -->
+
+  <!-- Lata roja (cola) -->
+  <g transform="translate(16,144)">
+    <rect x="0" y="4" width="46" height="80" rx="6" fill="#d62828"/>
+    <rect x="3" y="0" width="40" height="8" rx="3" fill="#c9ccd1"/>
+    <rect x="3" y="80" width="40" height="6" rx="3" fill="#c9ccd1"/>
+    <path d="M0 46 C14 34 30 60 46 42 L46 52 C30 70 14 44 0 56 Z" fill="#fff"/>
+    <rect x="7" y="12" width="6" height="64" rx="3" fill="#fff" opacity=".25"/>
+  </g>
+
+  <!-- Lata verde (lima-limón) -->
+  <g transform="translate(70,144)">
+    <rect x="0" y="4" width="46" height="80" rx="6" fill="#2f9e44"/>
+    <rect x="3" y="0" width="40" height="8" rx="3" fill="#c9ccd1"/>
+    <rect x="3" y="80" width="40" height="6" rx="3" fill="#c9ccd1"/>
+    <path d="M0 30 L46 18 L46 30 L0 42 Z" fill="#e3ef5b"/>
+    <path d="M0 58 L46 46 L46 52 L0 64 Z" fill="#e3ef5b"/>
+    <rect x="7" y="12" width="6" height="64" rx="3" fill="#fff" opacity=".25"/>
+  </g>
+
+  <!-- Lata naranja -->
+  <g transform="translate(124,144)">
+    <rect x="0" y="4" width="46" height="80" rx="6" fill="#f08c00"/>
+    <rect x="3" y="0" width="40" height="8" rx="3" fill="#c9ccd1"/>
+    <rect x="3" y="80" width="40" height="6" rx="3" fill="#c9ccd1"/>
+    <circle cx="23" cy="44" r="13" fill="#fff"/>
+    <circle cx="23" cy="44" r="8" fill="#f08c00"/>
+    <circle cx="12" cy="68" r="3" fill="#fff" opacity=".7"/>
+    <circle cx="34" cy="22" r="2.5" fill="#fff" opacity=".7"/>
+    <rect x="7" y="12" width="6" height="64" rx="3" fill="#fff" opacity=".25"/>
+  </g>
+
+  <!-- Botella de vidrio -->
+  <g transform="translate(182,96)">
+    <rect x="14" y="0" width="14" height="9" rx="2" fill="#d62828"/>
+    <path d="M15 8 h12 v22 c0 10 14 16 14 34 v64 a6 6 0 0 1 -6 6 h-28 a6 6 0 0 1 -6 -6 v-64 c0 -18 14 -24 14 -34 z" fill="#4a2617"/>
+    <rect x="1" y="74" width="40" height="26" fill="#d62828"/>
+    <path d="M4 90 C14 80 26 96 38 84" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <rect x="6" y="40" width="5" height="80" rx="2.5" fill="#fff" opacity=".2"/>
+  </g>
+
+  <!-- Paquete de snacks -->
+  <g transform="translate(240,150)">
+    <path d="M2 6 L8 0 L14 6 L20 0 L26 6 L32 0 L38 6 L44 0 L50 6 L56 0 L56 74 L50 80 L44 74 L38 80 L32 74 L26 80 L20 74 L14 80 L8 74 L2 80 Z" fill="#f4c430"/>
+    <ellipse cx="29" cy="40" rx="20" ry="13" fill="#d62828"/>
+    <ellipse cx="29" cy="40" rx="12" ry="6" fill="#fff" opacity=".85"/>
+    <rect x="8" y="12" width="40" height="5" rx="2.5" fill="#2f9e44"/>
+  </g>
+
+  <!-- Frasco de caramelos -->
+  <g transform="translate(314,140)">
+    <rect x="10" y="0" width="40" height="12" rx="3" fill="#2f9e44"/>
+    <rect x="0" y="10" width="60" height="80" rx="14" fill="#eaf6ee" stroke="#9cc9a8" stroke-width="2"/>
+    <circle cx="16" cy="70" r="7" fill="#d62828"/>
+    <circle cx="31" cy="74" r="7" fill="#f4c430"/>
+    <circle cx="45" cy="68" r="7" fill="#2f9e44"/>
+    <circle cx="23" cy="56" r="7" fill="#f08c00"/>
+    <circle cx="39" cy="54" r="7" fill="#7b4fd6"/>
+    <circle cx="30" cy="40" r="7" fill="#d62828"/>
+    <rect x="7" y="18" width="5" height="54" rx="2.5" fill="#fff" opacity=".6"/>
+  </g>
+
+  <!-- Estante de madera -->
+  <rect x="0" y="230" width="400" height="4" fill="#d9a878"/>
+  <rect x="0" y="234" width="400" height="12" fill="#b9814f"/>
+  <rect x="0" y="246" width="400" height="6" fill="#000" opacity=".08"/>
+</svg>
