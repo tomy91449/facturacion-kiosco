@@ -11,6 +11,8 @@ services:
     env_file: .env
     environment:
       HOST: 0.0.0.0
+      # Hora local: las ventas y estadísticas se agrupan por día y hora de Argentina
+      TZ: America/Argentina/Buenos_Aires
       PORT: "4000"
       DATABASE_URL: file:/app/data/pos.db
     ports:

@@ -3,7 +3,8 @@ import { z } from "zod";
 import { prisma } from "../db";
 import { hashPassword } from "../modules/auth/password";
 import { requireRole } from "./auth.middleware";
-import { asyncHandler } from "./store-scope";
+import { asyncHandler, readStoreScope } from "./store-scope";
+import { StatsService, localDay, parseLocalDay } from "../modules/stats/stats.service";
 
 export const adminRouter = Router();
 
@@ -68,10 +69,11 @@ adminRouter.patch(
 // ── USUARIOS ───────────────────────────────────────────────
 
 const passwordSchema = z.string().min(10, "La contraseña debe tener al menos 10 caracteres").max(256);
+const usernameSchema = z.string().trim().min(3).max(64).regex(/^[a-zA-Z0-9._-]+$/, "Usuario: solo letras, números, punto, guion y guion bajo");
 
 const createUserSchema = z
   .object({
-    username: z.string().trim().min(3).max(64).regex(/^[a-zA-Z0-9._-]+$/, "Usuario: solo letras, números, punto, guion y guion bajo"),
+    username: usernameSchema,
     password: passwordSchema,
     role:     z.enum(["ADMIN", "CASHIER"]).default("CASHIER"),
     storeId:  z.number().int().positive().nullable().optional(),
@@ -81,9 +83,11 @@ const createUserSchema = z
   });
 
 const updateUserSchema = z.object({
+  username: usernameSchema.optional(),
   password: passwordSchema.optional(),
+  role:     z.enum(["ADMIN", "CASHIER"]).optional(),
   active:   z.boolean().optional(),
-  storeId:  z.number().int().positive().optional(),
+  storeId:  z.number().int().positive().nullable().optional(),
 });
 
 function firstIssue(err: z.ZodError): string {
@@ -127,30 +131,68 @@ adminRouter.patch(
     const parsed = updateUserSchema.safeParse(req.body);
     if (!id.success) return res.status(400).json({ success: false, error: "Id inválido" });
     if (!parsed.success) return res.status(400).json({ success: false, error: firstIssue(parsed.error) });
-    const { password, active, storeId } = parsed.data;
+    const { username, password, role, active } = parsed.data;
 
     const target = await prisma.user.findUnique({ where: { id: id.data } });
     if (!target) return res.status(404).json({ success: false, error: "Usuario no encontrado" });
 
-    if (target.id === req.user!.id && active === false) {
+    const isSelf = target.id === req.user!.id;
+    if (isSelf && active === false) {
       return res.status(400).json({ success: false, error: "No podés desactivar tu propio usuario" });
     }
-    if (storeId !== undefined) {
-      if (target.role !== "CASHIER") return res.status(400).json({ success: false, error: "Solo un CASHIER tiene local" });
+    if (isSelf && role === "CASHIER") {
+      return res.status(400).json({ success: false, error: "No podés quitarte el perfil de administrador" });
+    }
+
+    // Un administrador no tiene local; un cajero siempre tiene uno
+    const finalRole = role ?? target.role;
+    const storeId   = finalRole === "ADMIN" ? null : (parsed.data.storeId !== undefined ? parsed.data.storeId : target.storeId);
+    if (finalRole === "CASHIER") {
+      if (storeId == null) return res.status(400).json({ success: false, error: "Elegí el local del cajero" });
       if (!(await prisma.store.findUnique({ where: { id: storeId } }))) {
         return res.status(404).json({ success: false, error: "Local no encontrado" });
       }
     }
 
+    // Siempre tiene que quedar al menos un administrador activo
+    const losesAdmin = target.role === "ADMIN" && target.active && (finalRole !== "ADMIN" || active === false);
+    if (losesAdmin && (await prisma.user.count({ where: { role: "ADMIN", active: true } })) <= 1) {
+      return res.status(400).json({ success: false, error: "Tiene que quedar al menos un administrador activo" });
+    }
+
     const user = await prisma.user.update({
       where:  { id: target.id },
       data:   {
+        role: finalRole,
+        storeId,
+        ...(username !== undefined && { username }),
         ...(active   !== undefined && { active }),
-        ...(storeId  !== undefined && { storeId }),
         ...(password !== undefined && { passwordHash: await hashPassword(password) }),
       },
       select: publicUserFields,
     });
     return res.json({ success: true, data: user });
+  })
+);
+
+// ── ESTADÍSTICAS ───────────────────────────────────────────
+
+const MAX_STATS_DAYS = 366;
+
+adminRouter.get(
+  "/stats",
+  onlyAdmin,
+  asyncHandler(async (req, res) => {
+    const hoy  = parseLocalDay(localDay(new Date()))!;
+    const to   = req.query.to   ? parseLocalDay(req.query.to)   : hoy;
+    const from = req.query.from ? parseLocalDay(req.query.from) : new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - 29);
+    if (!from || !to || from > to) {
+      return res.status(400).json({ success: false, error: "Rango de fechas inválido (AAAA-MM-DD, desde ≤ hasta)" });
+    }
+    if ((to.getTime() - from.getTime()) / 86_400_000 >= MAX_STATS_DAYS) {
+      return res.status(400).json({ success: false, error: `El rango no puede superar ${MAX_STATS_DAYS} días` });
+    }
+    const stats = await StatsService.getStats(readStoreScope(req), from, to);
+    return res.json({ success: true, data: stats });
   })
 );

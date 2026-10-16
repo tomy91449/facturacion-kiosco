@@ -78,8 +78,17 @@ Desinstalar o actualizar el programa no los borra. La primera vez se crea el adm
 
 | Rol | Qué puede hacer |
 |-----|-----------------|
-| **Administrador** | Crear locales y usuarios, ver la facturación de todos los locales u operar en uno eligiéndolo arriba a la derecha. |
+| **Administrador** | Crear, habilitar y deshabilitar locales; crear y editar usuarios (nombre, perfil, local y contraseña); ver las estadísticas de todos los locales u operar en uno eligiéndolo arriba a la derecha. |
 | **Cajero** | Vender, cargar productos y ver el cierre de caja **solo de su local**. |
+
+Deshabilitar un local corta al instante el acceso de sus cajeros; sus ventas se conservan. Siempre queda
+al menos un administrador activo, y nadie puede quitarse a sí mismo el perfil de administrador.
+
+**Estadísticas** (pestaña del administrador, `GET /stats?from=AAAA-MM-DD&to=AAAA-MM-DD`): facturación,
+ganancia bruta y margen comparados con el período anterior, tickets y ticket promedio, ventas anuladas,
+stock bajo, facturación por día, por hora, por medio de pago y por local, y los 10 productos que más
+facturan. La ganancia usa el costo guardado en cada venta (`sale_items.unit_cost`); las ventas
+anteriores a ese dato usan el costo actual del producto.
 
 Toda la API exige el header `Authorization: Bearer <token>`, que se obtiene en `POST /auth/login`.
 

@@ -27,7 +27,7 @@ export interface SaleDraft {
   tax:           number;
   grandTotal:    number;
   notes?:        string;
-  lineItems:     { productId: number; quantity: number; unitPrice: number; subtotal: number }[];
+  lineItems:     { productId: number; quantity: number; unitPrice: number; unitCost: number; subtotal: number }[];
 }
 
 export type SaleStatus = "PENDING_PAYMENT" | "COMPLETED" | "CANCELLED";
@@ -112,7 +112,7 @@ export const SaleService = {
       }
       const subtotal = toCents(product.price * quantity);
       total += subtotal;
-      lineItems.push({ productId: product.id, quantity, unitPrice: product.price, subtotal });
+      lineItems.push({ productId: product.id, quantity, unitPrice: product.price, unitCost: product.cost, subtotal });
     }
 
     total = toCents(total);
