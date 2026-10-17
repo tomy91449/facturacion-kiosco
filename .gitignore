@@ -25,9 +25,6 @@ prisma/*.db-journal
 Thumbs.db
 *.log
 
-# Clon duplicado del proyecto
-facturacionKiosco/
-
 # Capturas y logs de pruebas automatizadas del navegador
 .playwright-mcp/
 
